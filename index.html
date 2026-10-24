@@ -98,6 +98,14 @@
   .erow input{width:80px;flex:0 0 80px;padding:8px;text-align:center;font-weight:700}
   .erow input.doubt{border-color:var(--accent);color:var(--accent)}
   .erow .x{background:none;border:0;color:var(--muted);font-size:20px;padding:4px}
+  .previews{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .previews figure{margin:0;display:flex;flex-direction:column;gap:6px;align-items:center}
+  .previews canvas{width:100%;max-width:100%;aspect-ratio:1;border-radius:8px;border:1px solid var(--line);background:var(--panel2)}
+  .previews figcaption{font-size:12px;color:var(--muted)}
+  .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:4px}
+  .seg button{border:0;background:none;color:var(--muted);font:600 14px var(--body);padding:10px 4px;border-radius:9px}
+  .seg button.on{background:var(--accent);color:var(--accent-ink)}
+  input[type=range]{width:100%;accent-color:var(--accent)}
   .confirm{background:var(--panel2);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px}
   @media (max-width:360px){ .choices{grid-template-columns:1fr} }
   @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
@@ -238,6 +246,27 @@
         <h2>Kaartjes maken</h2>
         <p class="small">Maak een PDF per afspeellijst, of kies per lijst welke nummers erin komen. Voor: QR-code. Achter: artiest, jaartal en titel.</p>
         <label class="check"><input type="checkbox" id="cShuffle" checked> Willekeurige volgorde</label>
+      </div>
+      <div class="panel">
+        <div class="eyebrow">Achtergrondafbeelding</div>
+        <div class="previews">
+          <figure><canvas id="pvFront" width="496" height="496" aria-label="Voorbeeld voorkant"></canvas><figcaption>Voorkant</figcaption></figure>
+          <figure><canvas id="pvBack" width="496" height="496" aria-label="Voorbeeld achterkant"></canvas><figcaption>Achterkant</figcaption></figure>
+        </div>
+        <div class="row">
+          <label class="btn sec" for="bgFile">Afbeelding kiezen</label>
+          <button class="btn ghost" id="bgRemove" hidden>Verwijderen</button>
+        </div>
+        <input type="file" id="bgFile" accept="image/*" hidden>
+        <div id="bgOpts" class="wrap" hidden>
+          <div class="seg" role="group" aria-label="Gebruiken op">
+            <button data-where="front">Voorkant</button><button data-where="back">Achterkant</button><button data-where="both">Beide</button>
+          </div>
+          <label class="small" for="bgStrength">Hoe goed de afbeelding zichtbaar is</label>
+          <input type="range" id="bgStrength" min="20" max="100" step="5" value="60">
+          <p class="small">De QR-code blijft op een wit vlak staan, zodat hij goed scanbaar blijft. Op de achterkant komt een kleurlaag over de afbeelding, zodat jaartal en titel leesbaar blijven.</p>
+        </div>
+        <div class="status" id="bgStatus"></div>
       </div>
       <div class="panel">
         <div class="eyebrow">Per afspeellijst</div>
@@ -593,8 +622,18 @@ const START_LIST = {"id":"l_elin-sepp-nore","name":"Elin, Sepp & Nore","songs":[
   function marks(c){ c.strokeStyle='#bbb'; c.lineWidth=1.5; const g=2*PXMM, L=7*PXMM;
     for(let i=0;i<=COLS;i++){ const x=MX+i*CARD; c.beginPath(); c.moveTo(x,MY-g); c.lineTo(x,MY-L); c.moveTo(x,PH-MY+g); c.lineTo(x,PH-MY+L); c.stroke(); }
     for(let r=0;r<=ROWS;r++){ const y=MY+r*CARD; c.beginPath(); c.moveTo(MX-g,y); c.lineTo(MX-L,y); c.moveTo(PW-MX+g,y); c.lineTo(PW-MX+L,y); c.stroke(); } }
+  // Achtergrondafbeelding voor de kaartjes
+  let BG=null; const bgOpt={ where:store.get('bgwhere')||'both', strength:+(store.get('bgstrength')||60) };
+  function loadBg(){ const d=store.get('bg'); if(!d) return Promise.resolve(null);
+    return new Promise(res=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src=d; }); }
+  const bgOn = side => BG && (bgOpt.where==='both'||bgOpt.where===side);
+  function drawCover(c,img,x,y,w,h){ const r=Math.max(w/img.naturalWidth,h/img.naturalHeight), iw=img.naturalWidth*r, ih=img.naturalHeight*r;
+    c.save(); c.beginPath(); c.rect(x,y,w,h); c.clip(); c.drawImage(img,x+(w-iw)/2,y+(h-ih)/2,iw,ih); c.restore(); }
+  function hexA(hex,a){ const n=parseInt(hex.slice(1),16); return 'rgba('+(n>>16)+','+((n>>8)&255)+','+(n&255)+','+a+')'; }
   function front(c,x,y,s,n){
     c.fillStyle='#121019'; c.fillRect(x,y,CARD,CARD);
+    if(bgOn('front')){ drawCover(c,BG,x,y,CARD,CARD); c.fillStyle=hexA('#121019',1-bgOpt.strength/100); c.fillRect(x,y,CARD,CARD); }
+    if(bgOn('front')){ c.fillStyle=hexA('#121019',.75); c.fillRect(x,y+CARD-7*PXMM,CARD,7*PXMM); }
     const m=QR.encode(trackUrl(s.id)), k=m.length, mod=Math.floor(40*PXMM/k), real=mod*k, pad=Math.max(5.5*PXMM,4*mod);
     const qx=Math.round(x+(CARD-real)/2), qy=Math.round(y+(CARD-real)/2-2*PXMM);
     c.fillStyle='#fff'; rrect(c,qx-pad,qy-pad,real+2*pad,real+2*pad,3*PXMM); c.fill();
@@ -603,7 +642,10 @@ const START_LIST = {"id":"l_elin-sepp-nore","name":"Elin, Sepp & Nore","songs":[
     c.fillText('Hitlijn  ·  #'+n,x+CARD/2,y+CARD-3.4*PXMM);
   }
   function back(c,x,y,s,n){
-    c.fillStyle=CARD_COLORS[n%CARD_COLORS.length]; c.fillRect(x,y,CARD,CARD);
+    const col=CARD_COLORS[n%CARD_COLORS.length];
+    c.fillStyle=col; c.fillRect(x,y,CARD,CARD);
+    if(bgOn('back')){ drawCover(c,BG,x,y,CARD,CARD); c.fillStyle=hexA(col,Math.max(.25,1-bgOpt.strength/100*0.75)); c.fillRect(x,y,CARD,CARD); }
+    if(bgOn('back')){ c.fillStyle=hexA(col,.8); c.fillRect(x,y,CARD,15*PXMM); c.fillRect(x,y+CARD-17*PXMM,CARD,17*PXMM); }
     const inner=CARD-10*PXMM; c.fillStyle='#121019'; c.textAlign='center'; c.textBaseline='alphabetic';
     const A=fit(c,s.a,'600',Math.round(3.6*PXMM),inner,2,Math.round(2.4*PXMM)); c.font='600 '+A.size+'px '+FONT;
     let ty=y+9*PXMM; A.lines.forEach(l=>{ c.fillText(l,x+CARD/2,ty); ty+=A.size*1.2; });
@@ -650,7 +692,36 @@ const START_LIST = {"id":"l_elin-sepp-nore","name":"Elin, Sepp & Nore","songs":[
     $('cInfo').textContent=sel.length?s.length+' kaartjes uit '+sel.length+' lijst'+(sel.length===1?'':'en')+', op '+pg+' vel'+(pg===1?'':'len')+' A4. Welke lijsten meedoen, vink je aan op het startscherm.':'Vink op het startscherm de lijsten aan die je wilt combineren.';
     $('makePdf').disabled=!s.length;
   }
-  $('goCards').onclick=()=>{ $('cOut').hidden=true; $('cResult').hidden=true; renderCards(); show('vCards'); };
+  function renderBg(){
+    $('bgOpts').hidden=!BG; $('bgRemove').hidden=!BG;
+    document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('on',b.dataset.where===bgOpt.where));
+    $('bgStrength').value=bgOpt.strength;
+    const sample=(selectedSongs(true)[0])||{id:'5QGGDdqiTjGA8u8TS1xQRI',t:'Titel van het nummer',a:'Artiest',y:1999};
+    const f=$('pvFront').getContext('2d'), b=$('pvBack').getContext('2d');
+    f.clearRect(0,0,496,496); b.clearRect(0,0,496,496);
+    front(f,0,0,sample,1); back(b,0,0,sample,1);
+  }
+  function setBgFromFile(file){
+    if(!file.type.startsWith('image/')) return setStatus('bgStatus','Kies een afbeelding (JPG, PNG of HEIC-foto uit je fotobibliotheek).','err');
+    const url=URL.createObjectURL(file), im=new Image();
+    im.onload=()=>{ // verkleinen tot max. 900 px zodat hij bewaard kan worden
+      const sc=Math.min(1,900/Math.max(im.naturalWidth,im.naturalHeight)), cv=document.createElement('canvas');
+      cv.width=Math.round(im.naturalWidth*sc); cv.height=Math.round(im.naturalHeight*sc); cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);
+      URL.revokeObjectURL(url); const data=cv.toDataURL('image/jpeg',0.85);
+      const small=new Image(); small.onload=()=>{ BG=small; const ok=store.set('bg',data);
+        setStatus('bgStatus',ok?'Afbeelding ingesteld.':'Afbeelding ingesteld, maar deze browser kan hem niet bewaren voor de volgende keer.',ok?'ok':'err'); renderBg(); };
+      small.src=data; };
+    im.onerror=()=>{ URL.revokeObjectURL(url); setStatus('bgStatus','Deze afbeelding kan niet geopend worden. Probeer een JPG of PNG.','err'); };
+    im.src=url;
+  }
+  $('bgFile').onchange=e=>{ const f=e.target.files[0]; if(f) setBgFromFile(f); e.target.value=''; };
+  $('bgRemove').onclick=()=>{ BG=null; store.del('bg'); setStatus('bgStatus','Achtergrond verwijderd.'); renderBg(); };
+  document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{ bgOpt.where=b.dataset.where; store.set('bgwhere',bgOpt.where); renderBg(); });
+  $('bgStrength').oninput=()=>{ bgOpt.strength=+$('bgStrength').value; store.set('bgstrength',String(bgOpt.strength)); renderBg(); };
+  $('goCards').onclick=async()=>{ $('cOut').hidden=true; $('cResult').hidden=true; renderCards(); show('vCards');
+    if(!BG) BG=await loadBg();
+    try{ await document.fonts.load('800 40px "Bricolage Grotesque"'); await document.fonts.load('700 20px "Figtree"'); }catch(e){}
+    setStatus('bgStatus',''); renderBg(); };
   $('makePdf').onclick=()=>{ $('cOut').hidden=false; $('cResult').hidden=true;
     generate(selectedSongs(true),'alle lijsten','cStatus',$('cDownload'),[...$('cLists').querySelectorAll('button'),$('makePdf')],()=>$('cResult').hidden=false); };
 
