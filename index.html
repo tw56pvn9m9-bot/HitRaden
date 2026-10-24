@@ -1,0 +1,860 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14111f">
+<title>HitRaden</title>
+<style>
+  :root{
+    --bg:#14111f; --card:#211c33; --card2:#2a2440; --line:#352d52; --text:#f4f1ff; --muted:#a9a1c8;
+    --accent:#ff4f8b; --accent2:#ffc83d; --ok:#3ddc97; --err:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+  body{min-height:100dvh;display:flex;flex-direction:column}
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;
+    padding-top:max(14px,env(safe-area-inset-top));gap:8px}
+  .logo{font-weight:800;font-size:20px;letter-spacing:-.02em;user-select:none}
+  .logo span{color:var(--accent)}
+  .iconbtn{background:none;border:1px solid var(--line);color:var(--muted);border-radius:10px;padding:8px 10px;font-size:14px}
+  main{flex:1;display:flex;flex-direction:column;padding:0 16px 28px;gap:14px;max-width:520px;width:100%;margin:0 auto}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px}
+  h2{margin:0 0 8px;font-size:19px}
+  p{margin:0 0 10px;color:var(--muted);line-height:1.45;font-size:15px}
+  label{display:block;font-size:13px;color:var(--muted);margin:12px 0 6px}
+  input,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:#171327;color:var(--text);font-size:16px}
+  code.uri{display:block;word-break:break-all;background:#171327;border:1px dashed var(--line);padding:10px;border-radius:10px;font-size:13px;color:var(--accent2)}
+  .btn{display:block;width:100%;border:0;border-radius:14px;padding:15px;font-size:17px;font-weight:700;background:var(--accent);color:#fff;margin-top:12px}
+  .btn.secondary{background:#2c2545;color:var(--text)}
+  .btn.ghost{background:none;border:1px solid var(--line);color:var(--muted);font-weight:600}
+  .btn:disabled{opacity:.45}
+  .row{display:flex;gap:10px}.row>*{flex:1}
+  .hidden{display:none !important}
+  .status{min-height:20px;font-size:14px;color:var(--muted);margin-top:8px}
+  .status.err{color:var(--err)}.status.ok{color:var(--ok)}
+  ol{padding-left:20px;color:var(--muted);line-height:1.5;font-size:15px;margin:6px 0}
+  .small{font-size:13px}
+  /* spelers */
+  .plist{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .prow{display:flex;gap:8px;align-items:center}
+  .dot{width:14px;height:14px;border-radius:50%;flex:0 0 14px}
+  .prow input{flex:1}
+  .del{background:none;border:0;color:var(--muted);font-size:22px;padding:4px 8px}
+  .stepper{display:flex;align-items:center;gap:12px}
+  .stepper button{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:#171327;color:var(--text);font-size:22px}
+  .stepper b{font-size:22px;min-width:36px;text-align:center}
+  /* scorebalk */
+  .scores{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+  .chip{flex:0 0 auto;display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);
+    border-radius:999px;padding:6px 12px 6px 8px;font-size:14px;white-space:nowrap}
+  .chip.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(255,79,139,.25)}
+  .chip .n{font-weight:800}
+  .tok{color:var(--accent2);font-size:13px}
+  /* beurt */
+  .turnhead{text-align:center;padding:4px 0 0}
+  .turnhead .who{font-size:28px;font-weight:800;letter-spacing:-.02em}
+  .disc{width:150px;height:150px;border-radius:50%;margin:6px auto 10px;position:relative;
+    background:radial-gradient(circle at center,var(--accent) 0 14%,#111 15% 17%,#1c1830 18% 100%);
+    box-shadow:inset 0 0 0 6px #2c2545,0 10px 40px rgba(255,79,139,.25)}
+  .disc::after{content:"";position:absolute;inset:10px;border-radius:50%;
+    background:repeating-radial-gradient(circle,rgba(255,255,255,.05) 0 1px,transparent 1px 6px)}
+  .disc.spin{animation:spin 2.4s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .controls{display:flex;justify-content:center;gap:14px;align-items:center}
+  .playbtn{width:80px;height:80px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:30px}
+  .roundbtn{width:52px;height:52px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:20px}
+  /* tijdlijn */
+  .tl{display:flex;flex-direction:column;gap:0;margin-top:6px}
+  .tcard{display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:12px;padding:10px 12px;margin:2px 0}
+  .tcard .y{font-weight:800;font-size:20px;min-width:56px}
+  .tcard .t{font-size:13px;color:var(--muted);line-height:1.3;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .tcard.new{outline:2px solid var(--ok)}
+  .tcard.wrong{outline:2px solid var(--err);opacity:.8}
+  .slot{border:2px dashed var(--line);border-radius:12px;color:var(--muted);background:none;padding:10px;
+    font-size:14px;margin:4px 0;width:100%;text-align:center}
+  .slot.sel{border-style:solid;border-color:var(--accent);color:#fff;background:rgba(255,79,139,.15);font-weight:700}
+  .checks{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+  .check{display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:12px;padding:12px;font-size:16px}
+  .check input{width:24px;height:24px;accent-color:var(--accent)}
+  /* onthulling */
+  .reveal{text-align:center}
+  .reveal .bigyear{font-size:64px;font-weight:900;letter-spacing:-.03em;line-height:1}
+  .reveal .title{font-size:20px;font-weight:800;margin-top:10px}
+  .reveal .artist{color:var(--muted);margin-top:2px}
+  .verdict{font-size:18px;font-weight:800;margin-top:14px}
+  .verdict.ok{color:var(--ok)}.verdict.err{color:var(--err)}
+  .lib{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .lib:last-child{border-bottom:0}
+  .lib .nm{flex:1;min-width:0}
+  .lib .nm b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lib .nm span{font-size:13px;color:var(--muted)}
+  .sbtn{background:#2c2545;border:0;color:var(--text);border-radius:10px;padding:9px 12px;font-size:14px}
+  .sbtn.danger{background:none;color:var(--err);border:1px solid var(--line)}
+  .erow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .erow .nm{flex:1;min-width:0;font-size:14px;line-height:1.3}
+  .erow .nm span{color:var(--muted);font-size:13px}
+  .erow input{width:78px;flex:0 0 78px;padding:8px;text-align:center;font-weight:700}
+  .erow input.doubt{border-color:var(--accent2);color:var(--accent2)}
+  .erow .x{background:none;border:0;color:var(--muted);font-size:20px;padding:4px}
+  .mode{display:flex;align-items:center;gap:16px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);
+    border-radius:20px;padding:22px 18px;color:var(--text);font-size:15px}
+  .mode .mi{font-size:38px;width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:#2c2545;border-radius:16px;flex:0 0 56px}
+  .mode .mt{display:flex;flex-direction:column;gap:3px}
+  .mode .mt b{font-size:19px}
+  .mode .mt span{color:var(--muted);font-size:14px}
+  .mode:active{border-color:var(--accent)}
+  #vHome{display:flex;flex-direction:column;gap:12px}
+  #viewport{position:relative;border-radius:18px;overflow:hidden;background:#000;aspect-ratio:1/1}
+  #viewport video{width:100%;height:100%;object-fit:cover;display:block}
+  #viewport .frame{position:absolute;inset:18%;border:3px solid rgba(255,255,255,.85);border-radius:16px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+  #viewport .hint{position:absolute;left:0;right:0;bottom:12px;text-align:center;font-size:14px;color:#fff;text-shadow:0 1px 4px #000}
+  .win{text-align:center;padding:28px 18px}
+  .win .trophy{font-size:72px}
+  .rank{display:flex;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--line);font-size:16px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo" id="logo">Hit<span>Raden</span></div>
+  <div class="row" style="flex:0 0 auto;gap:6px">
+    <button class="iconbtn hidden" id="btnTimeline">Tijdlijnen</button>
+    <button class="iconbtn hidden" id="btnMenu">⚙︎</button>
+  </div>
+</header>
+
+<main>
+  <!-- Eenmalige setup -->
+  <section id="vSetup" class="panel hidden">
+    <h2>Eenmalig instellen</h2>
+    <ol>
+      <li>Ga naar <b>developer.spotify.com/dashboard</b> en log in.</li>
+      <li>Klik <b>Create app</b>. Naam en omschrijving mag je zelf kiezen.</li>
+      <li>Plak bij <b>Redirect URI</b> exact dit adres:</li>
+    </ol>
+    <code class="uri" id="redirectUri"></code>
+    <ol start="4">
+      <li>Vink <b>Web API</b> aan en sla op.</li>
+      <li>Kopieer de <b>Client ID</b> en plak hem hieronder.</li>
+    </ol>
+    <label for="clientId">Client ID</label>
+    <input id="clientId" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="bijv. 3f9a…">
+    <button class="btn" id="btnSaveId">Opslaan en inloggen bij Spotify</button>
+  </section>
+
+  <!-- Inloggen -->
+  <section id="vLogin" class="panel hidden">
+    <h2>Inloggen</h2>
+    <p>Log in met je Spotify Premium-account. De app vraagt alleen toestemming om het afspelen te bedienen.</p>
+    <button class="btn" id="btnLogin">Inloggen bij Spotify</button>
+    <div class="status" id="loginStatus"></div>
+  </section>
+
+  <!-- Apparaat -->
+  <section id="vDevice" class="panel hidden">
+    <h2>Waar speelt de muziek?</h2>
+    <p>Open de Spotify-app op de telefoon, speaker of laptop die moet afspelen en tik op Vernieuwen.</p>
+    <label for="deviceSel">Afspeelapparaat</label>
+    <select id="deviceSel"><option value="">Zoeken…</option></select>
+    <div class="row">
+      <button class="btn secondary" id="btnRefreshDev">↻ Vernieuwen</button>
+      <button class="btn" id="btnUseDev">Verder</button>
+    </div>
+    <div class="status" id="devStatus"></div>
+  </section>
+
+  <!-- Startscherm -->
+  <section id="vHome" class="hidden">
+    <button class="mode" id="hDigital">
+      <span class="mi">🎵</span><span class="mt"><b>Digitaal spelen</b><span id="hDigitalSub">2–6 spelers, alles in de app</span></span>
+    </button>
+    <button class="mode" id="hScan">
+      <span class="mi">📷</span><span class="mt"><b>Kaartjes scannen</b><span>Scan de QR-code op een geprint kaartje</span></span>
+    </button>
+    <button class="btn ghost" id="hLibrary">Afspeellijsten beheren</button>
+  </section>
+
+  <!-- Scannen -->
+  <section id="vScan" class="hidden">
+    <div id="viewport">
+      <video id="video" playsinline muted></video>
+      <div class="frame"></div>
+      <div class="hint">Richt op de QR-code van de kaart</div>
+    </div>
+    <div class="status" id="scanStatus" style="text-align:center"></div>
+    <canvas id="canvas" class="hidden"></canvas>
+    <button class="btn ghost" id="sHome">← Startscherm</button>
+  </section>
+
+  <!-- Gescand nummer -->
+  <section id="vScanPlay" class="hidden">
+    <div class="panel" style="text-align:center">
+      <div class="disc" id="sDisc"></div>
+      <div class="who" style="font-size:24px;font-weight:800">Raad het jaar!</div>
+      <p>Leg de kaart op de goede plek in je tijdlijn en draai hem dan om.</p>
+      <div class="controls">
+        <button class="roundbtn" id="sRestart" aria-label="Opnieuw">↺</button>
+        <button class="playbtn" id="sToggle" aria-label="Afspelen/pauzeren">❚❚</button>
+        <span style="width:52px"></span>
+      </div>
+      <div class="status" id="sStatus"></div>
+      <div class="reveal hidden" id="sAnswer" style="margin-top:12px">
+        <div class="bigyear" id="sYear"></div>
+        <div class="title" id="sTitle"></div>
+        <div class="artist" id="sArtist"></div>
+      </div>
+    </div>
+    <button class="btn" id="sNext">Volgende kaart scannen</button>
+    <button class="btn secondary hidden" id="sReveal">Toon antwoord in de app</button>
+    <button class="btn ghost" id="sHome2">← Startscherm</button>
+  </section>
+
+  <!-- Spelers -->
+  <section id="vPlayers" class="panel hidden">
+    <h2>Wie doen er mee?</h2>
+    <p>2 tot 6 spelers of teams. Iedereen krijgt één startkaart.</p>
+    <div class="plist" id="plist"></div>
+    <button class="btn ghost" id="btnAddPlayer">+ Speler toevoegen</button>
+    <label>Kaarten nodig om te winnen</label>
+    <div class="stepper"><button id="tMinus">−</button><b id="tVal">10</b><button id="tPlus">+</button></div>
+    <label>Met welke afspeellijsten?</label>
+    <div class="checks" id="plSel" style="margin-top:0"></div>
+    <button class="btn ghost" id="btnLibrary">+ Afspeellijst importeren of bewerken</button>
+    <label class="check" style="margin-top:14px"><input type="checkbox" id="optRandomStart"> Nummer op willekeurig moment laten beginnen</label>
+    <button class="btn" id="btnStart">Start het spel</button>
+    <button class="btn ghost hidden" id="btnResume">Ga verder met vorig spel</button>
+    <div class="small" style="margin-top:10px;color:var(--muted)" id="songCount"></div>
+    <button class="btn ghost" id="pHome">← Startscherm</button>
+  </section>
+
+  <!-- Beurt -->
+  <section id="vTurn" class="hidden">
+    <div class="scores" id="scores"></div>
+    <div class="panel" style="margin-top:12px">
+      <div class="turnhead">
+        <div class="small" style="color:var(--muted)">Aan de beurt</div>
+        <div class="who" id="who"></div>
+      </div>
+      <div class="disc" id="disc"></div>
+      <div class="controls">
+        <button class="roundbtn" id="btnRestart" aria-label="Opnieuw">↺</button>
+        <button class="playbtn" id="btnPlay" aria-label="Afspelen">▶</button>
+        <button class="roundbtn" id="btnSkip" aria-label="Ander nummer">⏭</button>
+      </div>
+      <div class="status" id="playStatus" style="text-align:center"></div>
+    </div>
+    <div class="panel">
+      <h2 style="font-size:16px">Waar hoort dit nummer in jouw tijdlijn?</h2>
+      <div class="tl" id="tl"></div>
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="cTitle"> Titel goed geraden</label>
+        <label class="check"><input type="checkbox" id="cArtist"> Artiest goed geraden</label>
+      </div>
+      <p class="small" style="margin-top:8px">Titel én artiest goed = 1 muntje. Met een muntje mag je een nummer overslaan.</p>
+      <button class="btn" id="btnReveal" disabled>Kies eerst een plek</button>
+    </div>
+  </section>
+
+  <!-- Onthulling -->
+  <section id="vReveal" class="hidden">
+    <div class="panel reveal">
+      <div class="bigyear" id="rYear"></div>
+      <div class="title" id="rTitle"></div>
+      <div class="artist" id="rArtist"></div>
+      <div class="verdict" id="rVerdict"></div>
+      <div class="small" id="rBonus" style="color:var(--accent2);margin-top:6px"></div>
+    </div>
+    <div class="panel">
+      <h2 style="font-size:16px" id="rTlHead"></h2>
+      <div class="tl" id="rTl"></div>
+    </div>
+    <button class="btn" id="btnNext">Volgende speler</button>
+  </section>
+
+  <!-- Tijdlijnen overzicht -->
+  <section id="vOverview" class="hidden">
+    <div id="ovList"></div>
+    <button class="btn secondary" id="btnBack">Terug naar het spel</button>
+  </section>
+
+  <!-- Winnaar -->
+  <section id="vWin" class="panel win hidden">
+    <div class="trophy">🏆</div>
+    <div class="who" style="font-size:30px;font-weight:900" id="winName"></div>
+    <p>heeft als eerste een complete tijdlijn!</p>
+    <div id="ranking" style="text-align:left;margin-top:14px"></div>
+    <button class="btn" id="btnAgain">Nieuw spel</button>
+  </section>
+
+  <!-- Bibliotheek / import -->
+  <section id="vLibrary" class="hidden">
+    <div class="panel">
+      <h2>Afspeellijst importeren</h2>
+      <p>Plak de link uit Spotify (Delen → Link kopiëren).</p>
+      <input id="impUrl" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://open.spotify.com/playlist/…">
+      <button class="btn" id="btnImport">Importeren</button>
+      <div class="status" id="impStatus"></div>
+      <p class="small" style="margin-top:10px">Spotify laat alleen je eigen afspeellijsten en lijsten waaraan je meewerkt importeren. Andere lijst? Kopieer de nummers in Spotify naar een eigen afspeellijst, of gebruik een CSV-bestand van exportify.app:</p>
+      <label class="btn secondary" style="text-align:center;cursor:pointer">CSV-bestand kiezen<input type="file" id="impCsv" accept=".csv,text/csv" class="hidden"></label>
+    </div>
+    <div class="panel">
+      <h2>Jouw afspeellijsten</h2>
+      <div id="libList"></div>
+    </div>
+    <button class="btn secondary" id="btnLibBack">Terug</button>
+  </section>
+
+  <!-- Jaartallen bewerken -->
+  <section id="vEdit" class="hidden">
+    <div class="panel">
+      <h2 id="edName"></h2>
+      <p class="small" id="edInfo"></p>
+      <label class="check"><input type="checkbox" id="edOnlyDoubt"> Alleen twijfelgevallen tonen</label>
+      <div id="edList" style="margin-top:10px"></div>
+    </div>
+    <button class="btn" id="btnEdDone">Klaar</button>
+  </section>
+
+  <!-- Menu -->
+  <section id="vMenu" class="panel hidden">
+    <h2>Instellingen</h2>
+    <button class="btn secondary" id="mDevice">Ander afspeelapparaat kiezen</button>
+    <button class="btn secondary" id="mNewGame">Spel stoppen en nieuw spel</button>
+    <button class="btn secondary" id="mHome">Naar startscherm</button>
+    <button class="btn ghost" id="mClose">Sluiten</button>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script>
+const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen voor Kinderen","y":2021,"d":187977,"u":0},{"id":"5BR0NuF8t22IXEb62zfw6g","t":"Haai Alarm!","a":"Kinderen voor Kinderen","y":2017,"d":183089,"u":0},{"id":"1oc1hFYnipURzvBoobOyj5","t":"Klaar Voor De Start","a":"Kinderen voor Kinderen","y":2013,"d":183019,"u":0},{"id":"27N8TFqYeZhdrgFITRJncP","t":"Mama Africa","a":"Kids United, Angelique Kidjo e.a.","y":2017,"d":169578,"u":0},{"id":"5YZuePCawcrg0DJrWovPu7","t":"Witch Doctor","a":"Cartoons","y":1998,"d":187453,"u":1},{"id":"5vNRhkKd0yEAg8suGBpjeY","t":"APT.","a":"ROSÉ, Bruno Mars","y":2024,"d":169917,"u":0},{"id":"5WaFuGr7qnGqPjOttOiM7R","t":"The Future's Starting Right Now","a":"Cast – Disneyland Paris","y":2024,"d":227056,"u":0},{"id":"0u4UYkVZm25CuxZ9DEnHPZ","t":"Mega Mindy tijd","a":"Mega Mindy","y":2007,"d":192280,"u":0},{"id":"5AAfz7AVcO8BBwOknCKZ1Y","t":"Spot aan","a":"Kinderen voor Kinderen","y":2026,"d":160394,"u":0},{"id":"5sxaTlX4bD1ygI59di44jN","t":"Op de boerderij","a":"Kinderen voor Kinderen","y":2025,"d":154293,"u":0},{"id":"6m3bymfrdwsYSiWiH623fu","t":"De Kleine Krokodil","a":"Snappie","y":2005,"d":134000,"u":1},{"id":"3U2FMlenYkTKN6Dyb3STda","t":"Bewegen Is Gezond","a":"Kinderen voor Kinderen","y":2013,"d":183382,"u":0},{"id":"6aoJh8zwnee5dwdAo9L85D","t":"Zoo","a":"Shakira","y":2025,"d":190822,"u":0},{"id":"7sYuFgxvQZ8uL3zdOXMQYG","t":"Ready for the Ride","a":"Oh, Hush! e.a.","y":2022,"d":128759,"u":0},{"id":"5Cp75TUMrHF6c8xbhdligS","t":"Golden","a":"HUNTR/X, EJAE e.a.","y":2025,"d":194607,"u":0},{"id":"3giTSv6iUSgwRxS7Op9Liv","t":"Baila bailalaa","a":"Kinderen voor Kinderen","y":2025,"d":176209,"u":0},{"id":"4Q7mu1QTRccDGjcSPBp6TL","t":"Tik Tok Tobias","a":"K3","y":2025,"d":212226,"u":0},{"id":"38ZJJMPnIX7gHzNJGueGMJ","t":"Vol avontuur","a":"Kinderen voor Kinderen","y":2025,"d":150734,"u":0},{"id":"1a7sr4v7f7tAig5fl68Vir","t":"Daba Die Daba Daa","a":"Kinderen voor Kinderen","y":2024,"d":182587,"u":0},{"id":"4rvCmVW04xgYTrQL6owidL","t":"Lekker eigenwijs","a":"Kinderen voor Kinderen","y":2024,"d":177966,"u":0},{"id":"5zh0gHpGzmzZEtsQRL4xPG","t":"Dansen in de regen","a":"Kinderen voor Kinderen","y":2024,"d":170000,"u":0},{"id":"7pXiqvF1YAmAGohFzpqXbM","t":"Hupsakee!","a":"Kinderen voor Kinderen","y":2016,"d":175160,"u":0},{"id":"5ZrDlcxIDZyjOzHdYW1ydr","t":"Barbie Girl","a":"Aqua","y":1997,"d":197960,"u":0},{"id":"6xQ0m1Y44VjkmFDCpgRq4a","t":"Time to Spidey Save the Day","a":"Patrick Stump","y":2021,"d":122717,"u":0},{"id":"20un8vh0AP7KzhusAjOBCZ","t":"Parade Mini Medley - Disney Stars On Parade","a":"Cast – Disneyland Paris","y":2017,"d":177319,"u":0},{"id":"39HFKh08mU0aktj9UulRnY","t":"Jolene (live)","a":"Miley Cyrus","y":2022,"d":266989,"u":0},{"id":"2VeLdiYiILcCOEV0izfzEW","t":"A Sky Full of Stars","a":"Taron Egerton","y":2021,"d":206437,"u":0},{"id":"600HVBpzF1WfBdaRwbEvLz","t":"Let It Go","a":"Idina Menzel","y":2013,"d":223840,"u":0},{"id":"03lxI1Duj1diFQlwhB55Hf","t":"Viva la Musique","a":"Fabiola Rivera","y":2025,"d":269826,"u":0},{"id":"2Er0v0gsk0tT0AO290yT5q","t":"Meer dan dit","a":"Shanna Slaap","y":2023,"d":205480,"u":0},{"id":"67Yfu97e4fbf2jKmRzaB6I","t":"Try Everything","a":"Shakira","y":2016,"d":196853,"u":0},{"id":"0mb7btREdC3wuIUmuVRgWn","t":"I'm Still Standing","a":"Taron Egerton","y":2016,"d":187853,"u":0},{"id":"4jHqnR9YQiA2fPnxk8IuoA","t":"De Fruitshake","a":"Dirk Scheele","y":2000,"d":157626,"u":1},{"id":"25brT5xsqdKuoZqvz3Ubrn","t":"Oya Lélé","a":"K3","y":2003,"d":224946,"u":0},{"id":"1QkWeGZ7XlGqjToH2CtkF7","t":"Naar zee","a":"Samson & Marie","y":2024,"d":171573,"u":0},{"id":"1Fkk22iAJCDi6mwdXC57Hh","t":"Tsjoe Tsjoe Wa","a":"DD Company, Minidisco","y":2005,"d":176012,"u":0},{"id":"2JJwUreki4qNMcQiwlaojo","t":"Into the Unknown","a":"Idina Menzel, AURORA","y":2019,"d":194848,"u":0},{"id":"0l204bJ3SkIgVavJXEhogp","t":"Shake It Off","a":"Nick Kroll, Reese Witherspoon","y":2016,"d":120560,"u":0},{"id":"1OzdZPZc7ycRnSaKSUK445","t":"De Voertuigen Stopdans","a":"Bewegenboog","y":2024,"d":108500,"u":0},{"id":"0LVjBdjZvJykxed42ExTLf","t":"Ladada (Mon Dernier Mot)","a":"Claude","y":2022,"d":164903,"u":0},{"id":"4ZUf3FD6sGRrHYeS0wJV9x","t":"Bibberlip","a":"Samson & Marie","y":2023,"d":169333,"u":0},{"id":"0b9RNAzGtDRRMQS1cF9HXT","t":"C'est La Vie","a":"Claude","y":2025,"d":160281,"u":0},{"id":"6EhMm5OUAnG9dUv1wPIy8E","t":"Samen Op De Moto","a":"Samson & Gert","y":1992,"d":212706,"u":0},{"id":"7I3NP4dUSCmj8Hq32lbJCy","t":"Ze kunnen zeggen wat ze willen","a":"Juf Roos","y":2020,"d":101781,"u":0},{"id":"0F51ZGp1APMEGmCgmG8Qwo","t":"Mango Mango","a":"K3","y":2022,"d":214693,"u":0},{"id":"6U4N2PJfSMRaUvuJNw2cwZ","t":"Allerbeste vriendjes","a":"Woezel & Pip, Elaine Hakkaart","y":2012,"d":175826,"u":0},{"id":"0DOsaB4Y1EdtEKGm0F3ym4","t":"Sjoebi Doebi Dabidee","a":"Kabouter Plop","y":2001,"d":219786,"u":1},{"id":"0SsiXCvOd6Rr24oxWJyBBx","t":"Klaar voor de start","a":"Samson & Marie","y":2023,"d":174146,"u":0},{"id":"2wh2fouzFMJdMn7AN4Xbsi","t":"Kaboem!","a":"Woezel & Pip, Rob De Nijs","y":2007,"d":99280,"u":0},{"id":"384BqKWr7EwyNnfRw1TlNL","t":"Geen woord over Bruno","a":"Nandi van Beurden, Franky Rampen e.a.","y":2021,"d":216120,"u":0},{"id":"2SH247fEMrWkKLFkIBDmc9","t":"Samson & Marie","a":"Samson & Marie","y":2019,"d":155146,"u":0},{"id":"2aCzgsuGPAWE0H1E8iDAAc","t":"Woezel en Pip themalied","a":"Woezel & Pip, Xavier Werner e.a.","y":2009,"d":38053,"u":0},{"id":"2USR9dk3Myt43PtI8p81jr","t":"Ik Ben Onderweg","a":"Jonas Benjamin Schmølker Hornehøj, Bert Heerink e.a.","y":2003,"d":219226,"u":0},{"id":"1Dwg5RO34KQVXE9TFhfiX3","t":"Kabouterdans","a":"Kabouter Plop","y":1998,"d":212413,"u":0},{"id":"0K2HvIg7U6gobu3jr7riz9","t":"Alles is op","a":"Samson & Marie","y":2020,"d":165546,"u":0},{"id":"6R8Rxrzj4p90DIGAeBVh2E","t":"Alle eendjes zwemmen in het water","a":"Juf Roos","y":2020,"d":111279,"u":0},{"id":"5styL9mA9C9J9uoCFZyrxo","t":"IJsjes","a":"Samson & Marie","y":2021,"d":172480,"u":0},{"id":"6eIVpZ99boNKb2dk7bjFqF","t":"Alles is op","a":"Samson & Gert","y":1996,"d":207426,"u":0},{"id":"62s3ftcdWYUPb7M6Oq6vtW","t":"Nijntje, Lief Klein Konijntje","a":"Nijntje","y":2003,"d":177028,"u":1},{"id":"7wo4937331tZ1CNq8YN2Kx","t":"De Antillen","a":"Samson & Marie","y":2023,"d":185640,"u":0},{"id":"7qsWOEmyN5ViWiyFbNKR9U","t":"De familie Madrigal","a":"Vajen van den Bosch, Ruth Jacott","y":2021,"d":257213,"u":0},{"id":"6B7CudzzTMdOMU26cXJ8gm","t":"Kabouter Plop Is Jarig","a":"Kabouter Plop","y":2007,"d":202680,"u":1},{"id":"71HUASgfi4IHTESQbeKkG1","t":"Olé pistolé","a":"Samson & Marie","y":2023,"d":206186,"u":0},{"id":"52RzzOD0FZAZ3h69ztLBFC","t":"De Krokodil","a":"Juf Roos","y":2022,"d":69130,"u":0},{"id":"2DAY2frY2fFQEo2j2Jm95z","t":"Samsonrock","a":"Samson & Gert","y":1991,"d":151760,"u":0},{"id":"3kmgazh9XUTj86iAPh9d8n","t":"Laat het los","a":"Willemijn Verkaik","y":2013,"d":224520,"u":0},{"id":"2w2seYOMk5f3DGO1jsAKzL","t":"In de Maneschijn","a":"Juf Roos","y":2016,"d":97613,"u":0},{"id":"7dmQkG1FrQJY1t9j3HJLh1","t":"Patatjes","a":"Samson & Gert","y":1994,"d":173133,"u":0},{"id":"5rohUzwEoRsUvAA1Bf3DLo","t":"Dos Oruguitas","a":"Sebastian Yatra","y":2021,"d":214613,"u":0},{"id":"517533ixslDgu4Sz2eREL0","t":"Het is winter Bibber Bibber","a":"Juf Roos","y":2019,"d":88500,"u":0},{"id":"6IlswpnrTYzhsqu97XBRlo","t":"Repeteren","a":"Samson & Gert","y":1993,"d":218426,"u":0},{"id":"35MHNTNYkhKoMJF4a4aQ0d","t":"Un Poco Loco","a":"Thijs Overpelt, Ara Halici","y":2017,"d":112213,"u":0},{"id":"0d3vGXLRw2CMKWWfUuqWrL","t":"Met De Vingertjes","a":"Ageeth De Haan","y":2016,"d":40040,"u":0},{"id":"0AqCbCUAf2Dulkl0uWa93O","t":"Wij Zoeken Een Schat","a":"Kabouter Plop","y":1998,"d":216000,"u":0},{"id":"7bGdfZMspyqe4nkvD6NQYv","t":"Hoofd, Schouders, Knie En Teen","a":"Juf Roos","y":2015,"d":49973,"u":0},{"id":"4l3xid9OQOyEgPSYVhGFqq","t":"Spaghetti","a":"Samson & Marie","y":2021,"d":174640,"u":0},{"id":"45pRhL0kqZhXlsD3bqwpuP","t":"Als Je Van Beren Leren Kan","a":"Michiel Geelen, Coen Flink","y":1968,"d":290306,"u":1},{"id":"3hxvWFEgwNLQufFPJfySLn","t":"Hokey Pokey","a":"Juf Roos","y":2016,"d":98560,"u":0},{"id":"1luM0tBestZJkamrUyyHkN","t":"De wereld is mooi","a":"Samson & Gert","y":2001,"d":190600,"u":1},{"id":"0tkA18Rl0YfmKMSdQPlHBv","t":"De wereld is mooi","a":"Samson & Marie","y":2020,"d":165520,"u":0},{"id":"3dpPtlmic1qsOkH349NDC1","t":"Hakuna Matata","a":"Door van Boeckel, David Verbeek e.a.","y":1994,"d":212480,"u":0},{"id":"0rVehhyEfemtnS8opr3zG1","t":"De Wielen Van De Bus","a":"Juf Roos","y":2015,"d":73546,"u":0},{"id":"0W33jemsseVmZwa4Z0K7qV","t":"Ochtendgymnastiek","a":"Samson & Gert","y":1997,"d":235160,"u":0},{"id":"5kYTswi7wzAqQrBhkfSD3S","t":"Aardappels Met Chocola","a":"2 Kleine Kleutertjes","y":2014,"d":100346,"u":0},{"id":"41X03qEF4ZF36iFYr3VzpA","t":"Ik Zag Twee Beren Broodjes Smeren","a":"Juf Roos","y":2015,"d":79106,"u":0},{"id":"0JTRPK4s4CZZU5HJPQitfK","t":"Wat Doet Een Eendje","a":"2 Kleine Kleutertjes","y":2014,"d":135506,"u":0},{"id":"2MrUx5NuueOTOkgWbGBR7Q","t":"Papegaaitje Leef Je Nog","a":"Juf Roos","y":2015,"d":62240,"u":0},{"id":"5taXrqCXiGqd3C61tOWLrG","t":"Wist Je Dat Een Visje (Blub Blub)","a":"2 Kleine Kleutertjes","y":2014,"d":115093,"u":0},{"id":"4iZOUiDRtq471kosN93NL6","t":"Ik Ben Net Als Jij","a":"Willem Duyn","y":1968,"d":277653,"u":1},{"id":"1Gc2mc7XrGkhiEFBttWFt4","t":"Twee Emmertjes Water Halen","a":"Juf Roos","y":2015,"d":94920,"u":0},{"id":"35MkkHw3cwsopx66xdVLGT","t":"Diep In De Zee","a":"Freddy Gumbs","y":1990,"d":193400,"u":1},{"id":"7gUiWALL1X2D1FfzYoaIFw","t":"Op een Grote Paddenstoel","a":"Juf Roos","y":2016,"d":63013,"u":0},{"id":"3HLFgil12ImXOp55HOTOPp","t":"Zomer","a":"Carlo Boszhard","y":2013,"d":111120,"u":0},{"id":"5eQIztnZYEqQo0n4oYG3LA","t":"Poesje Mauw","a":"Juf Roos","y":2016,"d":68520,"u":0},{"id":"3np11otqJqNGPcvYBPuFzg","t":"Geen dank hoor","a":"René van Kooten","y":2016,"d":163893,"u":0},{"id":"12ugRF8qlbu6jyRFhVv9k8","t":"Hee hee doe je mee (rapversie)","a":"Juf Roos","y":2022,"d":98297,"u":0},{"id":"3WMXdHcNubQ2bI1QxB5GT2","t":"Prins Ali","a":"Pierre Bokma","y":1993,"d":172653,"u":0},{"id":"4nvL6hkXOhJ6HEXPzIPJab","t":"Dit zijn mijn wangetjes","a":"Juf Roos","y":2021,"d":78545,"u":0},{"id":"0gS63AnnEsEH12y5u8n1Ae","t":"Wacht Maar Tot Ik Koning Ben","a":"Paul van Gorcum, Piet Hein Snijders e.a.","y":1994,"d":171400,"u":0},{"id":"6yqLSRGnVnhCFQuEbtgase","t":"Vijf kleine aapjes","a":"Juf Roos","y":2021,"d":110578,"u":0},{"id":"0fSOfMnfsHkof3YDLDo09K","t":"Zullen wij een sneeuwpop maken","a":"Chelsea Hegener, Noortje Herlaar e.a.","y":2013,"d":206733,"u":0},{"id":"6ItuVY5TZxt0HTUjifw4gz","t":"Klap eens in je handjes","a":"Juf Roos","y":2020,"d":116380,"u":0},{"id":"0r1Z1EJr7Gdb6eVGs0Z87G","t":"Ooit zal ik gaan","a":"Vajen van den Bosch","y":2016,"d":163386,"u":0},{"id":"3fS4VwLscFE99g02jKvOfw","t":"ABC lied","a":"Juf Roos","y":2019,"d":56181,"u":0},{"id":"2IqjvMFGOKwN1YPabRPQsP","t":"Rekenlied","a":"Juf Roos","y":2019,"d":22486,"u":0},{"id":"0vcYy3yyoKt4KQ82Y8wRFO","t":"Kolonel Hatie's Mars","a":"Lex Goudsmit","y":1968,"d":150426,"u":1},{"id":"6lwwMr1diSstQHa5CgEyIx","t":"Vingerlied","a":"Juf Roos","y":2019,"d":72603,"u":0},{"id":"25HWHWviuTuT0EPYOqhRtE","t":"Dat is waar","a":"Has Drijver, Vajen van den Bosch e.a.","y":2016,"d":210293,"u":0},{"id":"0FPdz1nObTRMZRIiIkeJ6B","t":"Smakelijk Eten","a":"Juf Roos","y":2016,"d":76721,"u":0},{"id":"22hYyBYUEGmgq8xsGitCMJ","t":"Sommige dingen veranderen nooit","a":"Noortje Herlaar, Willemijn Verkaik e.a.","y":2019,"d":209946,"u":0},{"id":"3qWJBxYsCiQDq2QIvCpZ6K","t":"Drie Kleine Visjes","a":"Juf Roos","y":2018,"d":72000,"u":0},{"id":"0kwHxnI7cB9GwuN7yfZtVS","t":"Niemand Swingt Zoals Een Echte Kat","a":"Huub Dikstaal, Marcel Jonker e.a.","y":1971,"d":354546,"u":1},{"id":"73xlDE9tFHc8I9INkPgzJn","t":"Opa Bakkebaard","a":"Juf Roos","y":2018,"d":80000,"u":0},{"id":"1itpD2QF2aUKdWvHQfbUPk","t":"Zo'n vriend als ik","a":"Pierre Bokma","y":1993,"d":147200,"u":0},{"id":"41T3fqf01t3ojfBiOh4bv5","t":"Wij Voeren Met Een Zucht","a":"Juf Roos","y":2018,"d":39687,"u":0},{"id":"4xqZ4uWihfEmryrAASlF5y","t":"Mankementje","a":"Cast - Frozen","y":2013,"d":179600,"u":0},{"id":"2HSskydpMKuc6mRSxFI5NY","t":"‘S Avonds Bloeit De Liefde Op","a":"B.B. Queen, Door van Boeckel e.a.","y":1994,"d":177826,"u":0},{"id":"43rn4qCXaWlEniD9vl5Kk0","t":"In de jungle","a":"Laurenz Hoorelbeke, Mike Wauters","y":2019,"d":84720,"u":0},{"id":"3ReXMmRArd146HpiOAAXOq","t":"Sterk zijn","a":"Jeske van de Staak","y":2021,"d":202226,"u":0},{"id":"5tk1JFzEL9x4vfAcLF5EhH","t":"Barbapapa","a":"De Gouden Nachtegaaltjes","y":1975,"d":109293,"u":1},{"id":"5YUSNxmO9YUViLrdHz7QeQ","t":"Ik loop als een beer","a":"Dirk Scheele","y":2017,"d":162193,"u":0},{"id":"37Qz85BgJQ0L5QfXNp2AT9","t":"Trouwen","a":"K3","y":2006,"d":184773,"u":0},{"id":"1efdop11Ayf6rekYq53HE3","t":"The Future's Starting Right Now","a":"Julien-Henry D'Ieteren, Michelle Josh e.a.","y":2024,"d":285208,"u":0},{"id":"0JbfsYStkbxqVk2pAWv8nj","t":"Voor het eerst na al die jaren","a":"Noortje Herlaar, Willemijn Verkaik","y":2013,"d":224533,"u":0},{"id":"4u82SjSzfauVXbRzqZeXyV","t":"Sun, Moon, and Stars","a":"The Singing Walrus","y":2020,"d":221250,"u":0},{"id":"0Ul3G0uGWfI2qPYjVVv4ix","t":"Ola ole olee","a":"Kinderen voor Kinderen","y":2026,"d":173312,"u":0}];
+(() => {
+  const SCOPES = 'user-modify-playback-state user-read-playback-state playlist-read-private playlist-read-collaborative';
+  const REDIRECT = location.origin + location.pathname;
+  const COLORS = ['#ff4f8b','#ffc83d','#3ddc97','#4fa8ff','#a77bff','#ff8a3d'];
+  const $ = id => document.getElementById(id);
+  const mem = {};
+  const store = {
+    get(k){ try { return localStorage.getItem('hr_'+k); } catch(e){ return mem[k] ?? null; } },
+    set(k,v){ try { localStorage.setItem('hr_'+k, v); } catch(e){ mem[k]=v; } },
+    del(k){ try { localStorage.removeItem('hr_'+k); } catch(e){ delete mem[k]; } }
+  };
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  const VIEWS = ['vSetup','vLogin','vDevice','vHome','vScan','vScanPlay','vPlayers','vTurn','vReveal','vOverview','vWin','vMenu','vLibrary','vEdit'];
+  let lastGameView = 'vTurn', curView = null, menuFrom = null, libFrom = 'vPlayers';
+  function show(v){
+    VIEWS.forEach(x => $(x).classList.toggle('hidden', x !== v));
+    const inGame = ['vTurn','vReveal','vOverview'].includes(v);
+    $('btnTimeline').classList.toggle('hidden', !inGame || v === 'vOverview');
+    $('btnMenu').classList.toggle('hidden', ['vSetup','vLogin','vMenu','vLibrary','vEdit'].includes(v));
+    if (['vTurn','vReveal'].includes(v)) lastGameView = v;
+    if (v !== 'vScan') stopCamera();
+    if (v !== 'vMenu') curView = v;
+    window.scrollTo(0,0);
+  }
+  function setStatus(el,msg,kind){ const e=$(el); e.textContent=msg||''; e.className='status'+(kind?' '+kind:''); }
+
+  /* ---------- Spotify-auth (PKCE) ---------- */
+  function randStr(n){ const a=new Uint8Array(n); crypto.getRandomValues(a); return Array.from(a,b=>(b%36).toString(36)).join(''); }
+  async function sha(s){ const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));
+    return btoa(String.fromCharCode(...new Uint8Array(d))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+  async function login(){
+    const cid=store.get('client_id'); if(!cid) return show('vSetup');
+    const v=randStr(64); store.set('verifier',v);
+    const p=new URLSearchParams({client_id:cid,response_type:'code',redirect_uri:REDIRECT,
+      code_challenge_method:'S256',code_challenge:await sha(v),scope:SCOPES});
+    location.href='https://accounts.spotify.com/authorize?'+p;
+  }
+  async function tokenReq(params){
+    const r=await fetch('https://accounts.spotify.com/api/token',{method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(params)});
+    const j=await r.json(); if(!r.ok) throw new Error(j.error_description||j.error||'Inloggen mislukt');
+    store.set('access',j.access_token); store.set('expires',String(Date.now()+(j.expires_in-60)*1000));
+    if(j.refresh_token) store.set('refresh',j.refresh_token);
+    if(j.scope) store.set('scopes',j.scope);
+  }
+  async function handleRedirect(){
+    const q=new URLSearchParams(location.search);
+    if(!q.has('code')&&!q.has('error')) return 'none';
+    history.replaceState({},'',REDIRECT);
+    if(q.get('error')){ show('vLogin'); setStatus('loginStatus','Spotify gaf een fout: '+q.get('error'),'err'); return 'fail'; }
+    try{ await tokenReq({client_id:store.get('client_id'),grant_type:'authorization_code',code:q.get('code'),
+      redirect_uri:REDIRECT,code_verifier:store.get('verifier')}); return 'ok'; }
+    catch(e){ show('vLogin'); setStatus('loginStatus',e.message,'err'); return 'fail'; }
+  }
+  async function token(){
+    if(Date.now()<+(store.get('expires')||0)) return store.get('access');
+    const rt=store.get('refresh'); if(!rt) throw new Error('login');
+    await tokenReq({client_id:store.get('client_id'),grant_type:'refresh_token',refresh_token:rt});
+    return store.get('access');
+  }
+  async function api(method,path,body){
+    let t; try{ t=await token(); }catch(e){ show('vLogin'); throw new Error('Log opnieuw in.'); }
+    const r=await fetch('https://api.spotify.com/v1'+path,{method,
+      headers:{Authorization:'Bearer '+t,...(body?{'Content-Type':'application/json'}:{})},
+      body:body?JSON.stringify(body):undefined});
+    if(r.status===401){ store.del('expires'); show('vLogin'); throw new Error('Log opnieuw in.'); }
+    if(r.status===204) return null;
+    const txt=await r.text(); let j=null; try{ j=txt?JSON.parse(txt):null; }catch(e){}
+    if(!r.ok){
+      const reason=j?.error?.reason;
+      if(r.status===404||reason==='NO_ACTIVE_DEVICE') throw new Error('Afspeelapparaat niet gevonden. Open Spotify op dat apparaat en kies het opnieuw via ⚙︎.');
+      if(reason==='PREMIUM_REQUIRED') throw new Error('Hiervoor is Spotify Premium nodig.');
+      throw new Error(j?.error?.message||('Fout '+r.status));
+    }
+    return j;
+  }
+  const dev = () => '?device_id='+encodeURIComponent(store.get('device')||'');
+
+  async function loadDevices(){
+    setStatus('devStatus','Zoeken…');
+    try{
+      const j=await api('GET','/me/player/devices'); const sel=$('deviceSel'); sel.innerHTML='';
+      const list=j?.devices||[];
+      if(!list.length){ sel.innerHTML='<option value="">Geen apparaat gevonden</option>';
+        return setStatus('devStatus','Open Spotify op het afspeelapparaat en tik op Vernieuwen.','err'); }
+      const saved=store.get('device');
+      list.forEach(d=>{ const o=document.createElement('option'); o.value=d.id;
+        o.textContent=d.name+' ('+d.type.toLowerCase()+')'+(d.is_active?' ✓':'');
+        if(d.id===saved||(!saved&&d.is_active)) o.selected=true; sel.appendChild(o); });
+      setStatus('devStatus',list.length===1?'1 apparaat gevonden.':list.length+' apparaten gevonden.','ok');
+    }catch(e){ setStatus('devStatus',e.message,'err'); }
+  }
+
+  /* ---------- Spel ---------- */
+  let G = null;           // spelstatus
+  let target = 10;
+  let draftPlayers = ['',''];
+  let playing = false;
+
+  function save(){ try{ store.set('game',JSON.stringify(G)); }catch(e){} }
+  function loadSaved(){ try{ const g=JSON.parse(store.get('game')||'null'); return g&&g.songs&&(g.winner===null||g.winner===undefined)?g:null; }catch(e){ return null; } }
+  function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+  function renderPlayerForm(){
+    const pl=$('plist'); pl.innerHTML='';
+    draftPlayers.forEach((name,i)=>{
+      const row=document.createElement('div'); row.className='prow';
+      row.innerHTML='<span class="dot" style="background:'+COLORS[i]+'"></span>'+
+        '<input maxlength="16" placeholder="Speler '+(i+1)+'" value="'+esc(name)+'">'+
+        (draftPlayers.length>2?'<button class="del" aria-label="Verwijder">×</button>':'');
+      row.querySelector('input').oninput=e=>{ draftPlayers[i]=e.target.value; };
+      const d=row.querySelector('.del'); if(d) d.onclick=()=>{ draftPlayers.splice(i,1); renderPlayerForm(); };
+      pl.appendChild(row);
+    });
+    $('btnAddPlayer').classList.toggle('hidden',draftPlayers.length>=6);
+    $('tVal').textContent=target;
+    $('btnResume').classList.toggle('hidden',!loadSaved());
+    renderPlSel();
+  }
+
+  function newGame(){
+    const names=draftPlayers.map((n,i)=>n.trim()||('Speler '+(i+1)));
+    const songs=selectedSongs(); if(songs.length<draftPlayers.length+5){ alert('Kies afspeellijsten met genoeg nummers.'); return; }
+    const deck=shuffle(songs.map((_,i)=>i));
+    G={ songs, players:names.map((n,i)=>({name:n,color:COLORS[i],cards:[],tokens:0})),
+        deck, turn:0, current:null, target, randomStart:$('optRandomStart').checked, winner:null, slot:null };
+    G.players.forEach(p=>{ p.cards.push(deck.pop()); });
+    store.set('target',String(target));
+    startTurn();
+  }
+  function sortedCards(p){ return p.cards.slice().sort((a,b)=>G.songs[a].y-G.songs[b].y); }
+
+  function startTurn(){
+    if(!G.deck.length){ return finish(); }
+    G.current=G.deck.pop(); G.slot=null; save();
+    playing=false; renderTurn(); show('vTurn');
+  }
+  function renderScores(el){
+    el.innerHTML=G.players.map((p,i)=>'<div class="chip'+(i===G.turn?' active':'')+'"><span class="dot" style="background:'+p.color+'"></span>'+
+      esc(p.name)+' <span class="n">'+p.cards.length+'/'+G.target+'</span>'+(p.tokens?'<span class="tok">● '+p.tokens+'</span>':'')+'</div>').join('');
+  }
+  function renderTurn(){
+    const p=G.players[G.turn];
+    renderScores($('scores'));
+    $('who').textContent=p.name; $('who').style.color=p.color;
+    $('btnPlay').textContent=playing?'❚❚':'▶'; $('disc').classList.toggle('spin',playing);
+    $('btnSkip').disabled=p.tokens<1; $('btnSkip').title=p.tokens<1?'Je hebt geen muntje':'Ander nummer (kost 1 muntje)';
+    $('cTitle').checked=false; $('cArtist').checked=false;
+    const cards=sortedCards(p), tl=$('tl'); tl.innerHTML='';
+    const addSlot=(idx,label)=>{ const b=document.createElement('button'); b.className='slot'+(G.slot===idx?' sel':'');
+      b.textContent=G.slot===idx?'✓ Hier':label; b.onclick=()=>{ G.slot=idx; save(); renderTurn(); }; tl.appendChild(b); };
+    cards.forEach((c,k)=>{
+      addSlot(k, k===0?'Hier (eerder dan '+G.songs[c].y+')':'Hier (tussen '+G.songs[cards[k-1]].y+' en '+G.songs[c].y+')');
+      const d=document.createElement('div'); d.className='tcard';
+      d.innerHTML='<div class="y">'+G.songs[c].y+'</div><div class="t">'+esc(G.songs[c].t)+' · '+esc(G.songs[c].a)+'</div>';
+      tl.appendChild(d);
+    });
+    addSlot(cards.length,'Hier (later dan '+G.songs[cards[cards.length-1]].y+')');
+    const r=$('btnReveal'); r.disabled=G.slot===null; r.textContent=G.slot===null?'Kies eerst een plek':'Onthul!';
+  }
+
+  async function playCurrent(fromStart){
+    const s=G.songs[G.current];
+    setStatus('playStatus','Starten…');
+    try{
+      let pos=0;
+      if(G.randomStart && s.d) pos=Math.floor(Math.max(0,s.d*0.15+Math.random()*s.d*0.45));
+      await api('PUT','/me/player/play'+dev(),{uris:['spotify:track:'+s.id],position_ms:fromStart?0:pos});
+      playing=true; setStatus('playStatus','');
+    }catch(e){ playing=false; setStatus('playStatus',e.message,'err'); }
+    $('btnPlay').textContent=playing?'❚❚':'▶'; $('disc').classList.toggle('spin',playing);
+  }
+  let started=false;
+  async function togglePlay(){
+    if(!playing && !started){ started=true; return playCurrent(false); }
+    try{
+      if(playing){ await api('PUT','/me/player/pause'+dev()); playing=false; }
+      else { await api('PUT','/me/player/play'+dev()); playing=true; }
+      setStatus('playStatus','');
+    }catch(e){ setStatus('playStatus',e.message,'err'); }
+    $('btnPlay').textContent=playing?'❚❚':'▶'; $('disc').classList.toggle('spin',playing);
+  }
+  async function pause(){ if(playing){ try{ await api('PUT','/me/player/pause'+dev()); }catch(e){} playing=false; } }
+
+  function reveal(){
+    const p=G.players[G.turn], s=G.songs[G.current], cards=sortedCards(p);
+    const prev=G.slot>0?G.songs[cards[G.slot-1]].y:-Infinity, next=G.slot<cards.length?G.songs[cards[G.slot]].y:Infinity;
+    const correct=s.y>=prev&&s.y<=next;
+    const bonus=$('cTitle').checked&&$('cArtist').checked;
+    if(correct) p.cards.push(G.current);
+    if(bonus) p.tokens++;
+    $('rYear').textContent=s.y; $('rTitle').textContent=s.t; $('rArtist').textContent=s.a;
+    const v=$('rVerdict'); v.textContent=correct?'Goed geplaatst! Kaart erbij.':'Helaas, verkeerde plek.'; v.className='verdict '+(correct?'ok':'err');
+    $('rBonus').textContent=bonus?'Titel en artiest goed: +1 muntje':'';
+    $('rTlHead').textContent='Tijdlijn van '+p.name+' ('+p.cards.length+'/'+G.target+')';
+    const list=correct?sortedCards(p):(()=>{ const a=cards.slice(); a.splice(G.slot,0,G.current); return a; })();
+    $('rTl').innerHTML=list.map(c=>'<div class="tcard'+(c===G.current?(correct?' new':' wrong'):'')+'"><div class="y">'+G.songs[c].y+'</div><div class="t">'+
+      esc(G.songs[c].t)+' · '+esc(G.songs[c].a)+'</div></div>').join('');
+    if(p.cards.length>=G.target){ G.winner=G.turn; $('btnNext').textContent='Bekijk de uitslag'; }
+    else $('btnNext').textContent='Volgende: '+G.players[(G.turn+1)%G.players.length].name;
+    G.current=null; save(); show('vReveal');
+  }
+  function nextTurn(){
+    pause(); started=false;
+    if(G.winner!==null && G.winner!==undefined) return finish();
+    G.turn=(G.turn+1)%G.players.length; startTurn();
+  }
+  function finish(){
+    pause();
+    const ranked=G.players.map(p=>p).sort((a,b)=>b.cards.length-a.cards.length||b.tokens-a.tokens);
+    const w=G.winner!=null?G.players[G.winner]:ranked[0];
+    $('winName').textContent=w.name; $('winName').style.color=w.color;
+    $('ranking').innerHTML=ranked.map((p,i)=>'<div class="rank"><span>'+(i+1)+'. '+esc(p.name)+'</span><b>'+p.cards.length+' kaarten'+(p.tokens?' · '+p.tokens+' ●':'')+'</b></div>').join('');
+    G.winner=G.winner??G.players.indexOf(w); save(); show('vWin');
+  }
+  async function skipSong(){
+    const p=G.players[G.turn]; if(p.tokens<1) return;
+    p.tokens--; await pause(); started=false; G.current=G.deck.pop(); G.slot=null; save();
+    if(G.current===undefined) return finish();
+    renderTurn(); setStatus('playStatus','Nieuw nummer. Druk op ▶.');
+  }
+  function overview(){
+    $('ovList').innerHTML=G.players.map(p=>'<div class="panel" style="margin-bottom:12px"><h2 style="color:'+p.color+'">'+esc(p.name)+
+      ' <span class="small" style="color:var(--muted)">'+p.cards.length+'/'+G.target+(p.tokens?' · '+p.tokens+' ●':'')+'</span></h2>'+
+      sortedCards(p).map(c=>'<div class="tcard"><div class="y">'+G.songs[c].y+'</div><div class="t">'+esc(G.songs[c].t)+' · '+esc(G.songs[c].a)+'</div></div>').join('')+'</div>').join('');
+    show('vOverview');
+  }
+
+  /* ---------- Bibliotheek ---------- */
+  const BUILTIN = { id:'builtin', name:'Elin, Sepp & Nore', builtin:true };
+  function loadLib(){ try{ return JSON.parse(store.get('lib')||'[]'); }catch(e){ return []; } }
+  function saveLib(lib){ try{ localStorage.setItem('hr_lib',JSON.stringify(lib)); return true; }
+    catch(e){ alert('Opslaan lukt niet: de opslag van je browser is vol of uitgeschakeld.'); return false; } }
+  function allLists(){ return [{...BUILTIN, songs:(store.get('builtin_edit')?JSON.parse(store.get('builtin_edit')):SONGS)}, ...loadLib()]; }
+  function getSel(){ try{ const v=JSON.parse(store.get('sel')||'null'); return Array.isArray(v)?v:['builtin']; }catch(e){ return ['builtin']; } }
+  function setSel(v){ store.set('sel',JSON.stringify(v)); }
+  function selectedSongs(){
+    const sel=getSel(), seen=new Set(), out=[];
+    allLists().filter(l=>sel.includes(l.id)).forEach(l=>l.songs.forEach(s=>{ if(!seen.has(s.id)){ seen.add(s.id); out.push({...s}); } }));
+    return out;
+  }
+  function renderPlSel(){
+    const sel=getSel(), lists=allLists(), box=$('plSel');
+    box.innerHTML=lists.map(l=>'<label class="check"><input type="checkbox" data-id="'+esc(l.id)+'"'+(sel.includes(l.id)?' checked':'')+'> <span style="flex:1">'+
+      esc(l.name)+'</span><span class="small" style="color:var(--muted)">'+l.songs.length+'</span></label>').join('');
+    box.querySelectorAll('input').forEach(i=>i.onchange=()=>{
+      setSel([...box.querySelectorAll('input:checked')].map(x=>x.dataset.id)); updateCount(); });
+    updateCount();
+  }
+  function updateCount(){ $('songCount').textContent=selectedSongs().length+' nummers in de stapel.'; }
+
+  function cleanTitle(t){
+    return t.replace(/\s+-\s+(From|Van)\s+["“].*$/,'').replace(/\s+-\s+From\s+.*$/,'').replace(/\/Soundtrack Version/,'')
+      .replace(/\s*\((feat|ft)\.[^)]*\)/i,'').replace(/\s+-\s+Live$/,' (live)')
+      .replace(/\s+-\s+(\d{4}\s+)?Remaster(ed)?(\s+\d{4})?(\s+Version)?$/i,'').replace(/\s+-\s+Radio Edit$/i,'').trim();
+  }
+  function cleanArtists(list){
+    const parts=list.map(x=>x.trim()).filter(Boolean);
+    const keep=parts.filter(p=>!/Cast$|^Disney$|^Studio 100$|^Disney Junior$/.test(p));
+    const a=keep.length?keep:parts;
+    return a.length>2?a[0]+', '+a[1]+' e.a.':a.join(', ');
+  }
+  // Jaartal schatten: releasedatum album vs. ISRC-registratiejaar (verzamelalbums krijgen anders een te recent jaar)
+  function guessYear(releaseDate, isrc, albumName, albumType){
+    const ay=parseInt(String(releaseDate||'').slice(0,4))||null;
+    let iy=null;
+    if(isrc && isrc.length>=7){ const yy=parseInt(isrc.slice(5,7)); if(!isNaN(yy)){ const cur=new Date().getFullYear()%100; iy=yy>cur?1900+yy:2000+yy; } }
+    let y=ay, doubt=false;
+    if(iy && ay && iy<ay-1){ y=iy; doubt=true; }
+    if(!y) { y=iy||new Date().getFullYear(); doubt=true; }
+    if(albumType==='compilation' || /remaster|hits|best of|greatest|deluxe|anniversary|collection|verzamel|jaar|years|top 2000|editie|edition/i.test(albumName||'')) doubt=true;
+    return { y, doubt };
+  }
+
+  async function importSpotify(){
+    const raw=$('impUrl').value.trim();
+    const m=raw.match(/playlist[\/:]([A-Za-z0-9]{22})/);
+    if(!m) return setStatus('impStatus','Dat lijkt geen afspeellijst-link. Kopieer de link via Delen in Spotify.','err');
+    const pid=m[1]; setStatus('impStatus','Afspeellijst ophalen…');
+    try{
+      let name='Afspeellijst';
+      try{ const meta=await api('GET','/playlists/'+pid+'?fields=name'); if(meta?.name) name=meta.name; }catch(e){}
+      const songs=[], seen=new Set(); let skipped=0;
+      let url='/playlists/'+pid+'/items?limit=50&offset=0', guard=0;
+      while(url && guard++<100){
+        const j=await api('GET',url);
+        const items=j?.items||[];
+        if(guard===1 && !items.length && !j?.total) throw new Error('Spotify geeft geen nummers terug. Is dit jouw eigen afspeellijst of een lijst waaraan je meewerkt?');
+        for(const it of items){
+          const tr=it.item||it.track;
+          if(!tr || tr.type!=='track' || tr.is_local || !tr.id){ skipped++; continue; }
+          if(seen.has(tr.id)) continue; seen.add(tr.id);
+          const g=guessYear(tr.album?.release_date, tr.external_ids?.isrc, tr.album?.name, tr.album?.album_type);
+          songs.push({ id:tr.id, t:cleanTitle(tr.name), a:cleanArtists((tr.artists||[]).map(x=>x.name)), y:g.y, d:tr.duration_ms||0, u:g.doubt?1:0 });
+        }
+        setStatus('impStatus',songs.length+' nummers opgehaald…');
+        url=j?.next?j.next.replace('https://api.spotify.com/v1',''):null;
+      }
+      if(!songs.length) throw new Error('Geen afspeelbare nummers gevonden.');
+      addList({ id:'sp_'+pid, name, songs }, skipped);
+    }catch(e){
+      const msg=/403|forbidden/i.test(e.message)?'Spotify staat het lezen van deze lijst niet toe. Alleen eigen lijsten of lijsten waaraan je meewerkt kunnen worden geïmporteerd.':e.message;
+      setStatus('impStatus',msg,'err');
+    }
+  }
+  function addList(list, skipped){
+    const lib=loadLib().filter(l=>l.id!==list.id); lib.push(list);
+    if(!saveLib(lib)) return;
+    const sel=getSel(); if(!sel.includes(list.id)) setSel([...sel,list.id]);
+    const doubts=list.songs.filter(s=>s.u).length;
+    setStatus('impStatus','"'+list.name+'" geïmporteerd: '+list.songs.length+' nummers'+(skipped?' ('+skipped+' overgeslagen)':'')+
+      (doubts?'. Controleer '+doubts+' twijfelachtige jaartallen.':'.'),'ok');
+    $('impUrl').value=''; renderLib();
+  }
+
+  // CSV (Exportify, Nederlands of Engels)
+  function parseCSV(text){
+    const rows=[]; let row=[], f='', q=false;
+    for(let i=0;i<text.length;i++){
+      const c=text[i];
+      if(q){ if(c==='"'){ if(text[i+1]==='"'){ f+='"'; i++; } else q=false; } else f+=c; }
+      else if(c==='"') q=true;
+      else if(c===','){ row.push(f); f=''; }
+      else if(c==='\n'||c==='\r'){ if(c==='\r'&&text[i+1]==='\n') i++; row.push(f); rows.push(row); row=[]; f=''; }
+      else f+=c;
+    }
+    if(f!==''||row.length){ row.push(f); rows.push(row); }
+    return rows.filter(r=>r.length>1);
+  }
+  function importCSV(file){
+    const rd=new FileReader();
+    rd.onload=()=>{
+      try{
+        const rows=parseCSV(String(rd.result).replace(/^﻿/,'')); const h=rows.shift().map(x=>x.trim().toLowerCase());
+        const col=(...names)=>h.findIndex(x=>names.includes(x));
+        const cUri=col('track uri','nummer uri','spotify id','track id'), cName=col('track name','nummernaam','naam van nummer'),
+              cArt=col('artist name(s)','naam van artiest','artist name','artiestnaam'), cRel=col('release date','album release date','releasedatum van het album','releasedatum'),
+              cIsrc=col('isrc'), cDur=col('duration (ms)','track duration (ms)','nummerduur (ms)'), cAlb=col('album name','naam van album');
+        if(cUri<0||cName<0) throw new Error('Dit CSV-bestand herken ik niet. Gebruik een export van exportify.app.');
+        const songs=[], seen=new Set(); let skipped=0;
+        for(const r of rows){
+          const m=String(r[cUri]||'').match(/(?:spotify:track:|track\/)?([A-Za-z0-9]{22})$/);
+          if(!m || /local/.test(r[cUri])){ skipped++; continue; }
+          if(seen.has(m[1])) continue; seen.add(m[1]);
+          const g=guessYear(cRel>=0?r[cRel]:'', cIsrc>=0?r[cIsrc]:'', cAlb>=0?r[cAlb]:'', '');
+          const arts=(cArt>=0?r[cArt]:'').replace(/\\,/g,'\u0001').split(',').map(x=>x.replace(/\u0001/g,','));
+          songs.push({ id:m[1], t:cleanTitle(r[cName]||''), a:cleanArtists(arts), y:g.y, d:cDur>=0?(+r[cDur]||0):0, u:g.doubt?1:0 });
+        }
+        if(!songs.length) throw new Error('Geen afspeelbare nummers gevonden in het bestand.');
+        const name=file.name.replace(/\.csv$/i,'').replace(/^[0-9a-f]{8}-/,'').replace(/_+/g,' ').trim()||'CSV-import';
+        addList({ id:'csv_'+name.toLowerCase().replace(/\W+/g,'-'), name, songs }, skipped);
+      }catch(e){ setStatus('impStatus',e.message,'err'); }
+    };
+    rd.readAsText(file,'utf-8');
+  }
+
+  function renderLib(){
+    const lists=allLists();
+    $('libList').innerHTML=lists.map(l=>{
+      const d=l.songs.filter(s=>s.u).length;
+      return '<div class="lib"><div class="nm"><b>'+esc(l.name)+'</b><span>'+l.songs.length+' nummers'+(d?' · '+d+' jaartallen te controleren':'')+'</span></div>'+
+        '<button class="sbtn" data-ed="'+esc(l.id)+'">Jaartallen</button>'+(l.builtin?'':'<button class="sbtn danger" data-del="'+esc(l.id)+'">×</button>')+'</div>';
+    }).join('');
+    $('libList').querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>openEditor(b.dataset.ed));
+    $('libList').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+      const l=loadLib().find(x=>x.id===b.dataset.del); if(!l||!confirm('"'+l.name+'" verwijderen?')) return;
+      saveLib(loadLib().filter(x=>x.id!==l.id)); setSel(getSel().filter(x=>x!==l.id)); renderLib(); });
+  }
+
+  let editing=null;
+  function openEditor(id){
+    const l=allLists().find(x=>x.id===id); if(!l) return;
+    editing={ id, name:l.name, builtin:!!l.builtin, songs:l.songs.map(s=>({...s})) };
+    $('edName').textContent=l.name; $('edOnlyDoubt').checked=false; renderEditor(); show('vEdit');
+  }
+  function renderEditor(){
+    const only=$('edOnlyDoubt').checked, d=editing.songs.filter(s=>s.u).length;
+    $('edInfo').textContent=editing.songs.length+' nummers. '+(d?d+' jaartallen zijn een schatting (geel): verzamelalbums en remasters geven vaak een te recent jaar.':'Tik op een jaartal om het aan te passen.');
+    const list=editing.songs.map((s,i)=>({s,i})).filter(x=>!only||x.s.u).sort((a,b)=>a.s.y-b.s.y);
+    $('edList').innerHTML=list.length?list.map(({s,i})=>'<div class="erow"><div class="nm">'+esc(s.t)+'<br><span>'+esc(s.a)+'</span></div>'+
+      '<input type="number" inputmode="numeric" min="1900" max="2100" data-i="'+i+'" value="'+s.y+'" class="'+(s.u?'doubt':'')+'">'+
+      '<button class="x" data-rm="'+i+'" aria-label="Verwijderen">×</button></div>').join(''):'<p>Geen twijfelgevallen meer.</p>';
+    $('edList').querySelectorAll('input').forEach(inp=>inp.onchange=()=>{
+      const y=parseInt(inp.value); const s=editing.songs[+inp.dataset.i];
+      if(y>=1900&&y<=2100){ s.y=y; s.u=0; inp.classList.remove('doubt'); persistEdit(); } else inp.value=s.y; });
+    $('edList').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{ editing.songs.splice(+b.dataset.rm,1); persistEdit(); renderEditor(); });
+  }
+  function persistEdit(){
+    if(editing.builtin){ try{ store.set('builtin_edit',JSON.stringify(editing.songs)); }catch(e){} return; }
+    const lib=loadLib(), l=lib.find(x=>x.id===editing.id); if(l){ l.songs=editing.songs; saveLib(lib); }
+  }
+
+  /* ---------- Startscherm ---------- */
+  function goHome(){
+    const g=loadSaved();
+    $('hDigitalSub').textContent=g?'Spel bezig: '+g.players.map(p=>p.name).join(', '):'2–6 spelers, alles in de app';
+    show('vHome');
+  }
+
+  /* ---------- Kaartjes scannen ---------- */
+  let stream=null, raf=null, detector=null, scanning=false, scanned=null, sPlaying=false, scanStart=0;
+  async function startScan(){
+    show('vScan'); setStatus('scanStatus','Camera starten…');
+    if(!navigator.mediaDevices?.getUserMedia) return setStatus('scanStatus','Deze browser kan de camera niet gebruiken. Open de app in Safari of Chrome.','err');
+    try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false}); }
+    catch(e){ return setStatus('scanStatus','Geen toegang tot de camera. Sta camera-toegang toe in je browser.','err'); }
+    if(curView!=='vScan'){ stopCamera(); return; }
+    const v=$('video'); v.srcObject=stream; await v.play().catch(()=>{});
+    setStatus('scanStatus','');
+    detector=null;
+    if('BarcodeDetector' in window){ try{ detector=new BarcodeDetector({formats:['qr_code']}); }catch(e){ detector=null; } }
+    scanStart=Date.now(); scanning=true; tick();
+  }
+  function stopCamera(){
+    scanning=false; if(raf) cancelAnimationFrame(raf);
+    if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+  }
+  async function tick(){
+    if(!scanning) return;
+    const v=$('video');
+    if(v.readyState>=2){
+      let text=null;
+      if(detector){ try{ const r=await detector.detect(v); if(r.length) text=r[0].rawValue; }catch(e){ detector=null; } }
+      else if(window.jsQR){
+        const c=$('canvas'), w=v.videoWidth, h=v.videoHeight, sc=Math.min(1,640/Math.max(w,h));
+        c.width=w*sc; c.height=h*sc; const ctx=c.getContext('2d',{willReadFrequently:true});
+        ctx.drawImage(v,0,0,c.width,c.height); const img=ctx.getImageData(0,0,c.width,c.height);
+        const r=jsQR(img.data,img.width,img.height,{inversionAttempts:'dontInvert'}); if(r) text=r.data;
+      } else if(!window.jsQR && !detector){ setStatus('scanStatus','QR-lezer laadt niet. Controleer je internetverbinding.','err'); }
+      if(text){
+        const id=parseTrack(text);
+        if(id && id===scanned && Date.now()-scanStart<4000){ setStatus('scanStatus','Dit kaartje is net gespeeld. Pak de volgende kaart.'); }
+        else if(id){ if(navigator.vibrate) navigator.vibrate(60); stopCamera(); return playScanned(id); }
+        if(!id) setStatus('scanStatus','Dit is geen Spotify-nummer. Probeer een andere kaart.','err');
+      }
+    }
+    raf=requestAnimationFrame(tick);
+  }
+  function parseTrack(s){
+    const m=s.match(/open\.spotify\.com\/(?:intl-[a-z]{2}\/)?track\/([A-Za-z0-9]{22})/)||s.match(/spotify:track:([A-Za-z0-9]{22})/);
+    return m?m[1]:null;
+  }
+  function findKnown(id){ for(const l of allLists()){ const s=l.songs.find(x=>x.id===id); if(s) return s; } return null; }
+  function setSPlaying(p){ sPlaying=p; $('sToggle').textContent=p?'❚❚':'▶'; $('sDisc').classList.toggle('spin',p); }
+  async function playScanned(id, fromStart=true){
+    scanned=id; show('vScanPlay'); $('sAnswer').classList.add('hidden');
+    $('sReveal').classList.toggle('hidden',!findKnown(id));
+    setStatus('sStatus','Starten…');
+    try{ await api('PUT','/me/player/play'+dev(),{uris:['spotify:track:'+id],position_ms:0}); setSPlaying(true); setStatus('sStatus',''); }
+    catch(e){ setSPlaying(false); setStatus('sStatus',e.message,'err'); }
+  }
+  async function sToggle(){
+    try{
+      if(sPlaying){ await api('PUT','/me/player/pause'+dev()); setSPlaying(false); }
+      else { await api('PUT','/me/player/play'+dev()); setSPlaying(true); }
+      setStatus('sStatus','');
+    }catch(e){ setStatus('sStatus',e.message,'err'); }
+  }
+  async function sPause(){ if(sPlaying){ try{ await api('PUT','/me/player/pause'+dev()); }catch(e){} setSPlaying(false); } }
+  $('hScan').onclick=startScan;
+  $('hDigital').onclick=()=>{ renderPlayerForm(); show('vPlayers'); };
+  $('pHome').onclick=goHome;
+  $('sHome').onclick=goHome;
+  $('sHome2').onclick=async()=>{ await sPause(); goHome(); };
+  $('sToggle').onclick=sToggle;
+  $('sRestart').onclick=()=>scanned&&playScanned(scanned);
+  $('sNext').onclick=async()=>{ await sPause(); startScan(); };
+  $('sReveal').onclick=()=>{ const s=findKnown(scanned); if(!s) return;
+    $('sYear').textContent=s.y; $('sTitle').textContent=s.t; $('sArtist').textContent=s.a; $('sAnswer').classList.remove('hidden'); $('sReveal').classList.add('hidden'); };
+
+  /* ---------- knoppen ---------- */
+  $('btnLibrary').onclick=()=>{ libFrom='vPlayers'; setStatus('impStatus',''); renderLib(); show('vLibrary'); };
+  $('hLibrary').onclick=()=>{ libFrom='vHome'; setStatus('impStatus',''); renderLib(); show('vLibrary'); };
+  $('btnImport').onclick=importSpotify;
+  $('impUrl').addEventListener('keydown',e=>{ if(e.key==='Enter') importSpotify(); });
+  $('impCsv').onchange=e=>{ const f=e.target.files[0]; if(f) importCSV(f); e.target.value=''; };
+  $('btnLibBack').onclick=()=>{ if(libFrom==='vHome') return goHome(); renderPlayerForm(); show('vPlayers'); };
+  $('btnEdDone').onclick=()=>{ renderLib(); show('vLibrary'); };
+  $('edOnlyDoubt').onchange=renderEditor;
+  $('redirectUri').textContent=REDIRECT;
+  $('clientId').value=store.get('client_id')||'';
+  $('btnSaveId').onclick=()=>{ const v=$('clientId').value.trim(); if(!v) return;
+    store.set('client_id',v); ['access','refresh','expires'].forEach(store.del); login(); };
+  $('btnLogin').onclick=login;
+  $('btnRefreshDev').onclick=loadDevices;
+  $('btnUseDev').onclick=()=>{ const v=$('deviceSel').value; if(!v) return setStatus('devStatus','Kies eerst een apparaat.','err');
+    store.set('device',v); if(menuFrom==='vScan'||menuFrom==='vScanPlay'){ menuFrom=null; return startScan(); } if(G&&G.winner==null&&menuFrom&&['vTurn','vReveal','vOverview'].includes(menuFrom)){ menuFrom=null; return show(lastGameView); } menuFrom=null; goHome(); };
+  $('btnAddPlayer').onclick=()=>{ if(draftPlayers.length<6){ draftPlayers.push(''); renderPlayerForm(); } };
+  $('tMinus').onclick=()=>{ target=Math.max(3,target-1); $('tVal').textContent=target; };
+  $('tPlus').onclick=()=>{ target=Math.min(20,target+1); $('tVal').textContent=target; };
+  $('btnStart').onclick=newGame;
+  $('btnResume').onclick=()=>{ G=loadSaved(); if(!G) return; if(G.current==null) startTurn(); else { renderTurn(); show('vTurn'); } };
+  $('btnPlay').onclick=togglePlay;
+  $('btnRestart').onclick=()=>{ started=true; playCurrent(true); };
+  $('btnSkip').onclick=skipSong;
+  $('btnReveal').onclick=async()=>{ await pause(); reveal(); };
+  $('btnNext').onclick=nextTurn;
+  $('btnTimeline').onclick=overview;
+  $('btnBack').onclick=()=>show(lastGameView);
+  $('btnAgain').onclick=()=>{ store.del('game'); G=null; renderPlayerForm(); show('vPlayers'); };
+  $('btnMenu').onclick=()=>{ menuFrom=curView; $('mNewGame').classList.toggle('hidden',!(G&&G.winner==null)); show('vMenu'); };
+  $('mClose').onclick=()=>{ const f=menuFrom; menuFrom=null; if(f==='vScan') return startScan(); if(f==='vPlayers'){ renderPlayerForm(); return show('vPlayers'); } if(f) return show(f); goHome(); };
+  $('mHome').onclick=async()=>{ menuFrom=null; await pause(); await sPause(); goHome(); };
+  $('mDevice').onclick=()=>{ show('vDevice'); loadDevices(); };
+  $('mNewGame').onclick=()=>{ if(!G||confirm('Huidig spel stoppen?')){ pause(); store.del('game'); G=null; renderPlayerForm(); show('vPlayers'); } };
+
+  // Logo 1,5 s ingedrukt houden = alles wissen
+  let pressT; const logo=$('logo');
+  logo.addEventListener('pointerdown',()=>pressT=setTimeout(()=>{ if(confirm('Alle instellingen en het spel wissen?')){
+    ['client_id','access','refresh','expires','device','verifier','game'].forEach(store.del); location.reload(); } },1500));
+  ['pointerup','pointerleave'].forEach(ev=>logo.addEventListener(ev,()=>clearTimeout(pressT)));
+
+  /* ---------- start ---------- */
+  (async()=>{
+    target=+(store.get('target')||10);
+    if(!store.get('client_id')) return show('vSetup');
+    const r=await handleRedirect(); if(r==='fail') return;
+    if(!store.get('refresh')) return show('vLogin');
+    if(!(store.get('scopes')||'').includes('playlist-read-private')){ show('vLogin'); return setStatus('loginStatus','Log één keer opnieuw in: de app heeft nu ook toestemming nodig om je afspeellijsten te lezen.'); }
+    if(!store.get('device')){ show('vDevice'); return loadDevices(); }
+    goHome();
+  })();
+
+  window.__hr = { get G(){ return G; }, BUILTIN: SONGS }; // voor testen
+})();
+</script>
+</body>
+</html>
