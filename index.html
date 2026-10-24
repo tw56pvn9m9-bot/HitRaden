@@ -134,6 +134,7 @@
       <li>Plak bij <b>Redirect URI</b> exact dit adres:</li>
     </ol>
     <code class="uri" id="redirectUri"></code>
+    <button class="btn secondary" id="btnCopyUri" style="padding:10px;font-size:15px">Adres kopiëren</button>
     <ol start="4">
       <li>Vink <b>Web API</b> aan en sla op.</li>
       <li>Kopieer de <b>Client ID</b> en plak hem hieronder.</li>
@@ -149,6 +150,12 @@
     <p>Log in met je Spotify Premium-account. De app vraagt alleen toestemming om het afspelen te bedienen.</p>
     <button class="btn" id="btnLogin">Inloggen bij Spotify</button>
     <div class="status" id="loginStatus"></div>
+    <p class="small" style="margin-top:14px">Foutmelding "redirect_uri: Not matching configuration"? Dan staat in je Spotify-app een ander adres dan dit. Plak precies dit adres bij Redirect URIs:</p>
+    <code class="uri" id="redirectUri2"></code>
+    <div class="row">
+      <button class="btn secondary" id="btnCopyUri2" style="padding:10px;font-size:15px">Adres kopiëren</button>
+      <button class="btn ghost" id="btnChangeId" style="padding:10px;font-size:15px">Client ID wijzigen</button>
+    </div>
   </section>
 
   <!-- Apparaat -->
@@ -331,7 +338,7 @@
 const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen voor Kinderen","y":2021,"d":187977,"u":0},{"id":"5BR0NuF8t22IXEb62zfw6g","t":"Haai Alarm!","a":"Kinderen voor Kinderen","y":2017,"d":183089,"u":0},{"id":"1oc1hFYnipURzvBoobOyj5","t":"Klaar Voor De Start","a":"Kinderen voor Kinderen","y":2013,"d":183019,"u":0},{"id":"27N8TFqYeZhdrgFITRJncP","t":"Mama Africa","a":"Kids United, Angelique Kidjo e.a.","y":2017,"d":169578,"u":0},{"id":"5YZuePCawcrg0DJrWovPu7","t":"Witch Doctor","a":"Cartoons","y":1998,"d":187453,"u":1},{"id":"5vNRhkKd0yEAg8suGBpjeY","t":"APT.","a":"ROSÉ, Bruno Mars","y":2024,"d":169917,"u":0},{"id":"5WaFuGr7qnGqPjOttOiM7R","t":"The Future's Starting Right Now","a":"Cast – Disneyland Paris","y":2024,"d":227056,"u":0},{"id":"0u4UYkVZm25CuxZ9DEnHPZ","t":"Mega Mindy tijd","a":"Mega Mindy","y":2007,"d":192280,"u":0},{"id":"5AAfz7AVcO8BBwOknCKZ1Y","t":"Spot aan","a":"Kinderen voor Kinderen","y":2026,"d":160394,"u":0},{"id":"5sxaTlX4bD1ygI59di44jN","t":"Op de boerderij","a":"Kinderen voor Kinderen","y":2025,"d":154293,"u":0},{"id":"6m3bymfrdwsYSiWiH623fu","t":"De Kleine Krokodil","a":"Snappie","y":2005,"d":134000,"u":1},{"id":"3U2FMlenYkTKN6Dyb3STda","t":"Bewegen Is Gezond","a":"Kinderen voor Kinderen","y":2013,"d":183382,"u":0},{"id":"6aoJh8zwnee5dwdAo9L85D","t":"Zoo","a":"Shakira","y":2025,"d":190822,"u":0},{"id":"7sYuFgxvQZ8uL3zdOXMQYG","t":"Ready for the Ride","a":"Oh, Hush! e.a.","y":2022,"d":128759,"u":0},{"id":"5Cp75TUMrHF6c8xbhdligS","t":"Golden","a":"HUNTR/X, EJAE e.a.","y":2025,"d":194607,"u":0},{"id":"3giTSv6iUSgwRxS7Op9Liv","t":"Baila bailalaa","a":"Kinderen voor Kinderen","y":2025,"d":176209,"u":0},{"id":"4Q7mu1QTRccDGjcSPBp6TL","t":"Tik Tok Tobias","a":"K3","y":2025,"d":212226,"u":0},{"id":"38ZJJMPnIX7gHzNJGueGMJ","t":"Vol avontuur","a":"Kinderen voor Kinderen","y":2025,"d":150734,"u":0},{"id":"1a7sr4v7f7tAig5fl68Vir","t":"Daba Die Daba Daa","a":"Kinderen voor Kinderen","y":2024,"d":182587,"u":0},{"id":"4rvCmVW04xgYTrQL6owidL","t":"Lekker eigenwijs","a":"Kinderen voor Kinderen","y":2024,"d":177966,"u":0},{"id":"5zh0gHpGzmzZEtsQRL4xPG","t":"Dansen in de regen","a":"Kinderen voor Kinderen","y":2024,"d":170000,"u":0},{"id":"7pXiqvF1YAmAGohFzpqXbM","t":"Hupsakee!","a":"Kinderen voor Kinderen","y":2016,"d":175160,"u":0},{"id":"5ZrDlcxIDZyjOzHdYW1ydr","t":"Barbie Girl","a":"Aqua","y":1997,"d":197960,"u":0},{"id":"6xQ0m1Y44VjkmFDCpgRq4a","t":"Time to Spidey Save the Day","a":"Patrick Stump","y":2021,"d":122717,"u":0},{"id":"20un8vh0AP7KzhusAjOBCZ","t":"Parade Mini Medley - Disney Stars On Parade","a":"Cast – Disneyland Paris","y":2017,"d":177319,"u":0},{"id":"39HFKh08mU0aktj9UulRnY","t":"Jolene (live)","a":"Miley Cyrus","y":2022,"d":266989,"u":0},{"id":"2VeLdiYiILcCOEV0izfzEW","t":"A Sky Full of Stars","a":"Taron Egerton","y":2021,"d":206437,"u":0},{"id":"600HVBpzF1WfBdaRwbEvLz","t":"Let It Go","a":"Idina Menzel","y":2013,"d":223840,"u":0},{"id":"03lxI1Duj1diFQlwhB55Hf","t":"Viva la Musique","a":"Fabiola Rivera","y":2025,"d":269826,"u":0},{"id":"2Er0v0gsk0tT0AO290yT5q","t":"Meer dan dit","a":"Shanna Slaap","y":2023,"d":205480,"u":0},{"id":"67Yfu97e4fbf2jKmRzaB6I","t":"Try Everything","a":"Shakira","y":2016,"d":196853,"u":0},{"id":"0mb7btREdC3wuIUmuVRgWn","t":"I'm Still Standing","a":"Taron Egerton","y":2016,"d":187853,"u":0},{"id":"4jHqnR9YQiA2fPnxk8IuoA","t":"De Fruitshake","a":"Dirk Scheele","y":2000,"d":157626,"u":1},{"id":"25brT5xsqdKuoZqvz3Ubrn","t":"Oya Lélé","a":"K3","y":2003,"d":224946,"u":0},{"id":"1QkWeGZ7XlGqjToH2CtkF7","t":"Naar zee","a":"Samson & Marie","y":2024,"d":171573,"u":0},{"id":"1Fkk22iAJCDi6mwdXC57Hh","t":"Tsjoe Tsjoe Wa","a":"DD Company, Minidisco","y":2005,"d":176012,"u":0},{"id":"2JJwUreki4qNMcQiwlaojo","t":"Into the Unknown","a":"Idina Menzel, AURORA","y":2019,"d":194848,"u":0},{"id":"0l204bJ3SkIgVavJXEhogp","t":"Shake It Off","a":"Nick Kroll, Reese Witherspoon","y":2016,"d":120560,"u":0},{"id":"1OzdZPZc7ycRnSaKSUK445","t":"De Voertuigen Stopdans","a":"Bewegenboog","y":2024,"d":108500,"u":0},{"id":"0LVjBdjZvJykxed42ExTLf","t":"Ladada (Mon Dernier Mot)","a":"Claude","y":2022,"d":164903,"u":0},{"id":"4ZUf3FD6sGRrHYeS0wJV9x","t":"Bibberlip","a":"Samson & Marie","y":2023,"d":169333,"u":0},{"id":"0b9RNAzGtDRRMQS1cF9HXT","t":"C'est La Vie","a":"Claude","y":2025,"d":160281,"u":0},{"id":"6EhMm5OUAnG9dUv1wPIy8E","t":"Samen Op De Moto","a":"Samson & Gert","y":1992,"d":212706,"u":0},{"id":"7I3NP4dUSCmj8Hq32lbJCy","t":"Ze kunnen zeggen wat ze willen","a":"Juf Roos","y":2020,"d":101781,"u":0},{"id":"0F51ZGp1APMEGmCgmG8Qwo","t":"Mango Mango","a":"K3","y":2022,"d":214693,"u":0},{"id":"6U4N2PJfSMRaUvuJNw2cwZ","t":"Allerbeste vriendjes","a":"Woezel & Pip, Elaine Hakkaart","y":2012,"d":175826,"u":0},{"id":"0DOsaB4Y1EdtEKGm0F3ym4","t":"Sjoebi Doebi Dabidee","a":"Kabouter Plop","y":2001,"d":219786,"u":1},{"id":"0SsiXCvOd6Rr24oxWJyBBx","t":"Klaar voor de start","a":"Samson & Marie","y":2023,"d":174146,"u":0},{"id":"2wh2fouzFMJdMn7AN4Xbsi","t":"Kaboem!","a":"Woezel & Pip, Rob De Nijs","y":2007,"d":99280,"u":0},{"id":"384BqKWr7EwyNnfRw1TlNL","t":"Geen woord over Bruno","a":"Nandi van Beurden, Franky Rampen e.a.","y":2021,"d":216120,"u":0},{"id":"2SH247fEMrWkKLFkIBDmc9","t":"Samson & Marie","a":"Samson & Marie","y":2019,"d":155146,"u":0},{"id":"2aCzgsuGPAWE0H1E8iDAAc","t":"Woezel en Pip themalied","a":"Woezel & Pip, Xavier Werner e.a.","y":2009,"d":38053,"u":0},{"id":"2USR9dk3Myt43PtI8p81jr","t":"Ik Ben Onderweg","a":"Jonas Benjamin Schmølker Hornehøj, Bert Heerink e.a.","y":2003,"d":219226,"u":0},{"id":"1Dwg5RO34KQVXE9TFhfiX3","t":"Kabouterdans","a":"Kabouter Plop","y":1998,"d":212413,"u":0},{"id":"0K2HvIg7U6gobu3jr7riz9","t":"Alles is op","a":"Samson & Marie","y":2020,"d":165546,"u":0},{"id":"6R8Rxrzj4p90DIGAeBVh2E","t":"Alle eendjes zwemmen in het water","a":"Juf Roos","y":2020,"d":111279,"u":0},{"id":"5styL9mA9C9J9uoCFZyrxo","t":"IJsjes","a":"Samson & Marie","y":2021,"d":172480,"u":0},{"id":"6eIVpZ99boNKb2dk7bjFqF","t":"Alles is op","a":"Samson & Gert","y":1996,"d":207426,"u":0},{"id":"62s3ftcdWYUPb7M6Oq6vtW","t":"Nijntje, Lief Klein Konijntje","a":"Nijntje","y":2003,"d":177028,"u":1},{"id":"7wo4937331tZ1CNq8YN2Kx","t":"De Antillen","a":"Samson & Marie","y":2023,"d":185640,"u":0},{"id":"7qsWOEmyN5ViWiyFbNKR9U","t":"De familie Madrigal","a":"Vajen van den Bosch, Ruth Jacott","y":2021,"d":257213,"u":0},{"id":"6B7CudzzTMdOMU26cXJ8gm","t":"Kabouter Plop Is Jarig","a":"Kabouter Plop","y":2007,"d":202680,"u":1},{"id":"71HUASgfi4IHTESQbeKkG1","t":"Olé pistolé","a":"Samson & Marie","y":2023,"d":206186,"u":0},{"id":"52RzzOD0FZAZ3h69ztLBFC","t":"De Krokodil","a":"Juf Roos","y":2022,"d":69130,"u":0},{"id":"2DAY2frY2fFQEo2j2Jm95z","t":"Samsonrock","a":"Samson & Gert","y":1991,"d":151760,"u":0},{"id":"3kmgazh9XUTj86iAPh9d8n","t":"Laat het los","a":"Willemijn Verkaik","y":2013,"d":224520,"u":0},{"id":"2w2seYOMk5f3DGO1jsAKzL","t":"In de Maneschijn","a":"Juf Roos","y":2016,"d":97613,"u":0},{"id":"7dmQkG1FrQJY1t9j3HJLh1","t":"Patatjes","a":"Samson & Gert","y":1994,"d":173133,"u":0},{"id":"5rohUzwEoRsUvAA1Bf3DLo","t":"Dos Oruguitas","a":"Sebastian Yatra","y":2021,"d":214613,"u":0},{"id":"517533ixslDgu4Sz2eREL0","t":"Het is winter Bibber Bibber","a":"Juf Roos","y":2019,"d":88500,"u":0},{"id":"6IlswpnrTYzhsqu97XBRlo","t":"Repeteren","a":"Samson & Gert","y":1993,"d":218426,"u":0},{"id":"35MHNTNYkhKoMJF4a4aQ0d","t":"Un Poco Loco","a":"Thijs Overpelt, Ara Halici","y":2017,"d":112213,"u":0},{"id":"0d3vGXLRw2CMKWWfUuqWrL","t":"Met De Vingertjes","a":"Ageeth De Haan","y":2016,"d":40040,"u":0},{"id":"0AqCbCUAf2Dulkl0uWa93O","t":"Wij Zoeken Een Schat","a":"Kabouter Plop","y":1998,"d":216000,"u":0},{"id":"7bGdfZMspyqe4nkvD6NQYv","t":"Hoofd, Schouders, Knie En Teen","a":"Juf Roos","y":2015,"d":49973,"u":0},{"id":"4l3xid9OQOyEgPSYVhGFqq","t":"Spaghetti","a":"Samson & Marie","y":2021,"d":174640,"u":0},{"id":"45pRhL0kqZhXlsD3bqwpuP","t":"Als Je Van Beren Leren Kan","a":"Michiel Geelen, Coen Flink","y":1968,"d":290306,"u":1},{"id":"3hxvWFEgwNLQufFPJfySLn","t":"Hokey Pokey","a":"Juf Roos","y":2016,"d":98560,"u":0},{"id":"1luM0tBestZJkamrUyyHkN","t":"De wereld is mooi","a":"Samson & Gert","y":2001,"d":190600,"u":1},{"id":"0tkA18Rl0YfmKMSdQPlHBv","t":"De wereld is mooi","a":"Samson & Marie","y":2020,"d":165520,"u":0},{"id":"3dpPtlmic1qsOkH349NDC1","t":"Hakuna Matata","a":"Door van Boeckel, David Verbeek e.a.","y":1994,"d":212480,"u":0},{"id":"0rVehhyEfemtnS8opr3zG1","t":"De Wielen Van De Bus","a":"Juf Roos","y":2015,"d":73546,"u":0},{"id":"0W33jemsseVmZwa4Z0K7qV","t":"Ochtendgymnastiek","a":"Samson & Gert","y":1997,"d":235160,"u":0},{"id":"5kYTswi7wzAqQrBhkfSD3S","t":"Aardappels Met Chocola","a":"2 Kleine Kleutertjes","y":2014,"d":100346,"u":0},{"id":"41X03qEF4ZF36iFYr3VzpA","t":"Ik Zag Twee Beren Broodjes Smeren","a":"Juf Roos","y":2015,"d":79106,"u":0},{"id":"0JTRPK4s4CZZU5HJPQitfK","t":"Wat Doet Een Eendje","a":"2 Kleine Kleutertjes","y":2014,"d":135506,"u":0},{"id":"2MrUx5NuueOTOkgWbGBR7Q","t":"Papegaaitje Leef Je Nog","a":"Juf Roos","y":2015,"d":62240,"u":0},{"id":"5taXrqCXiGqd3C61tOWLrG","t":"Wist Je Dat Een Visje (Blub Blub)","a":"2 Kleine Kleutertjes","y":2014,"d":115093,"u":0},{"id":"4iZOUiDRtq471kosN93NL6","t":"Ik Ben Net Als Jij","a":"Willem Duyn","y":1968,"d":277653,"u":1},{"id":"1Gc2mc7XrGkhiEFBttWFt4","t":"Twee Emmertjes Water Halen","a":"Juf Roos","y":2015,"d":94920,"u":0},{"id":"35MkkHw3cwsopx66xdVLGT","t":"Diep In De Zee","a":"Freddy Gumbs","y":1990,"d":193400,"u":1},{"id":"7gUiWALL1X2D1FfzYoaIFw","t":"Op een Grote Paddenstoel","a":"Juf Roos","y":2016,"d":63013,"u":0},{"id":"3HLFgil12ImXOp55HOTOPp","t":"Zomer","a":"Carlo Boszhard","y":2013,"d":111120,"u":0},{"id":"5eQIztnZYEqQo0n4oYG3LA","t":"Poesje Mauw","a":"Juf Roos","y":2016,"d":68520,"u":0},{"id":"3np11otqJqNGPcvYBPuFzg","t":"Geen dank hoor","a":"René van Kooten","y":2016,"d":163893,"u":0},{"id":"12ugRF8qlbu6jyRFhVv9k8","t":"Hee hee doe je mee (rapversie)","a":"Juf Roos","y":2022,"d":98297,"u":0},{"id":"3WMXdHcNubQ2bI1QxB5GT2","t":"Prins Ali","a":"Pierre Bokma","y":1993,"d":172653,"u":0},{"id":"4nvL6hkXOhJ6HEXPzIPJab","t":"Dit zijn mijn wangetjes","a":"Juf Roos","y":2021,"d":78545,"u":0},{"id":"0gS63AnnEsEH12y5u8n1Ae","t":"Wacht Maar Tot Ik Koning Ben","a":"Paul van Gorcum, Piet Hein Snijders e.a.","y":1994,"d":171400,"u":0},{"id":"6yqLSRGnVnhCFQuEbtgase","t":"Vijf kleine aapjes","a":"Juf Roos","y":2021,"d":110578,"u":0},{"id":"0fSOfMnfsHkof3YDLDo09K","t":"Zullen wij een sneeuwpop maken","a":"Chelsea Hegener, Noortje Herlaar e.a.","y":2013,"d":206733,"u":0},{"id":"6ItuVY5TZxt0HTUjifw4gz","t":"Klap eens in je handjes","a":"Juf Roos","y":2020,"d":116380,"u":0},{"id":"0r1Z1EJr7Gdb6eVGs0Z87G","t":"Ooit zal ik gaan","a":"Vajen van den Bosch","y":2016,"d":163386,"u":0},{"id":"3fS4VwLscFE99g02jKvOfw","t":"ABC lied","a":"Juf Roos","y":2019,"d":56181,"u":0},{"id":"2IqjvMFGOKwN1YPabRPQsP","t":"Rekenlied","a":"Juf Roos","y":2019,"d":22486,"u":0},{"id":"0vcYy3yyoKt4KQ82Y8wRFO","t":"Kolonel Hatie's Mars","a":"Lex Goudsmit","y":1968,"d":150426,"u":1},{"id":"6lwwMr1diSstQHa5CgEyIx","t":"Vingerlied","a":"Juf Roos","y":2019,"d":72603,"u":0},{"id":"25HWHWviuTuT0EPYOqhRtE","t":"Dat is waar","a":"Has Drijver, Vajen van den Bosch e.a.","y":2016,"d":210293,"u":0},{"id":"0FPdz1nObTRMZRIiIkeJ6B","t":"Smakelijk Eten","a":"Juf Roos","y":2016,"d":76721,"u":0},{"id":"22hYyBYUEGmgq8xsGitCMJ","t":"Sommige dingen veranderen nooit","a":"Noortje Herlaar, Willemijn Verkaik e.a.","y":2019,"d":209946,"u":0},{"id":"3qWJBxYsCiQDq2QIvCpZ6K","t":"Drie Kleine Visjes","a":"Juf Roos","y":2018,"d":72000,"u":0},{"id":"0kwHxnI7cB9GwuN7yfZtVS","t":"Niemand Swingt Zoals Een Echte Kat","a":"Huub Dikstaal, Marcel Jonker e.a.","y":1971,"d":354546,"u":1},{"id":"73xlDE9tFHc8I9INkPgzJn","t":"Opa Bakkebaard","a":"Juf Roos","y":2018,"d":80000,"u":0},{"id":"1itpD2QF2aUKdWvHQfbUPk","t":"Zo'n vriend als ik","a":"Pierre Bokma","y":1993,"d":147200,"u":0},{"id":"41T3fqf01t3ojfBiOh4bv5","t":"Wij Voeren Met Een Zucht","a":"Juf Roos","y":2018,"d":39687,"u":0},{"id":"4xqZ4uWihfEmryrAASlF5y","t":"Mankementje","a":"Cast - Frozen","y":2013,"d":179600,"u":0},{"id":"2HSskydpMKuc6mRSxFI5NY","t":"‘S Avonds Bloeit De Liefde Op","a":"B.B. Queen, Door van Boeckel e.a.","y":1994,"d":177826,"u":0},{"id":"43rn4qCXaWlEniD9vl5Kk0","t":"In de jungle","a":"Laurenz Hoorelbeke, Mike Wauters","y":2019,"d":84720,"u":0},{"id":"3ReXMmRArd146HpiOAAXOq","t":"Sterk zijn","a":"Jeske van de Staak","y":2021,"d":202226,"u":0},{"id":"5tk1JFzEL9x4vfAcLF5EhH","t":"Barbapapa","a":"De Gouden Nachtegaaltjes","y":1975,"d":109293,"u":1},{"id":"5YUSNxmO9YUViLrdHz7QeQ","t":"Ik loop als een beer","a":"Dirk Scheele","y":2017,"d":162193,"u":0},{"id":"37Qz85BgJQ0L5QfXNp2AT9","t":"Trouwen","a":"K3","y":2006,"d":184773,"u":0},{"id":"1efdop11Ayf6rekYq53HE3","t":"The Future's Starting Right Now","a":"Julien-Henry D'Ieteren, Michelle Josh e.a.","y":2024,"d":285208,"u":0},{"id":"0JbfsYStkbxqVk2pAWv8nj","t":"Voor het eerst na al die jaren","a":"Noortje Herlaar, Willemijn Verkaik","y":2013,"d":224533,"u":0},{"id":"4u82SjSzfauVXbRzqZeXyV","t":"Sun, Moon, and Stars","a":"The Singing Walrus","y":2020,"d":221250,"u":0},{"id":"0Ul3G0uGWfI2qPYjVVv4ix","t":"Ola ole olee","a":"Kinderen voor Kinderen","y":2026,"d":173312,"u":0}];
 (() => {
   const SCOPES = 'user-modify-playback-state user-read-playback-state playlist-read-private playlist-read-collaborative';
-  const REDIRECT = location.origin + location.pathname;
+  const REDIRECT = location.origin + location.pathname.replace(/index\.html$/i,'');
   const COLORS = ['#ff4f8b','#ffc83d','#3ddc97','#4fa8ff','#a77bff','#ff8a3d'];
   const $ = id => document.getElementById(id);
   const mem = {};
@@ -400,13 +407,48 @@ const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen vo
     const txt=await r.text(); let j=null; try{ j=txt?JSON.parse(txt):null; }catch(e){}
     if(!r.ok){
       const reason=j?.error?.reason;
-      if(r.status===404||reason==='NO_ACTIVE_DEVICE') throw new Error('Afspeelapparaat niet gevonden. Open Spotify op dat apparaat en kies het opnieuw via ⚙︎.');
-      if(reason==='PREMIUM_REQUIRED') throw new Error('Hiervoor is Spotify Premium nodig.');
-      throw new Error(j?.error?.message||('Fout '+r.status));
+      let msg=j?.error?.message||('Fout '+r.status);
+      if(r.status===404||reason==='NO_ACTIVE_DEVICE') msg='Afspeelapparaat niet gevonden.';
+      if(reason==='PREMIUM_REQUIRED') msg='Hiervoor is Spotify Premium nodig.';
+      const err=new Error(msg+' (code '+r.status+(reason?' '+reason:'')+')'); err.status=r.status; err.reason=reason; throw err;
     }
     return j;
   }
   const dev = () => '?device_id='+encodeURIComponent(store.get('device')||'');
+
+  // Afspelen met herstel: telefoons zetten Spotify in de achtergrond 'in slaap', waardoor het apparaat verdwijnt.
+  const sleep = ms => new Promise(r=>setTimeout(r,ms));
+  const NO_DEVICE_HELP = 'Spotify is niet actief. Open de Spotify-app op het afspeelapparaat, speel een willekeurig nummer een paar seconden af en kom dan terug naar HitRaden.';
+  async function wakeDevice(){
+    const j=await api('GET','/me/player/devices'); const list=(j?.devices||[]).filter(d=>!d.is_restricted);
+    if(!list.length) throw new Error(NO_DEVICE_HELP);
+    const saved=store.get('device');
+    const d=list.find(x=>x.id===saved)||list.find(x=>x.is_active)||list.find(x=>x.type==='Smartphone')||list[0];
+    store.set('device',d.id);
+    try{ await api('PUT','/me/player',{device_ids:[d.id],play:false}); }catch(e){}
+    await sleep(700);
+    return d;
+  }
+  async function spPlay(body){
+    try{ await api('PUT','/me/player/play'+dev(),body); }
+    catch(e){
+      if(e.status===404||e.reason==='NO_ACTIVE_DEVICE'||e.status===502||e.status===503){
+        await wakeDevice();
+        try{ await api('PUT','/me/player/play'+dev(),body); }
+        catch(e2){ if(e2.status===404||e2.reason==='NO_ACTIVE_DEVICE') throw new Error(NO_DEVICE_HELP); throw e2; }
+      } else throw e;
+    }
+  }
+  // Controle: speelt het gekozen nummer echt? (titel wordt niet getoond)
+  async function verifyPlaying(trackId, statusEl){
+    await sleep(1800);
+    try{
+      const st=await api('GET','/me/player');
+      if(!st) return setStatus(statusEl,NO_DEVICE_HELP,'err');
+      if(st.item?.id!==trackId || !st.is_playing)
+        setStatus(statusEl,'Spotify reageert wel, maar het nummer speelt niet op '+(st.device?.name||'het apparaat')+'. Tik nog eens op ↺, of kies een ander apparaat via ⚙︎.','err');
+    }catch(e){}
+  }
 
   async function loadDevices(){
     setStatus('devStatus','Zoeken…');
@@ -497,8 +539,8 @@ const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen vo
     try{
       let pos=0;
       if(G.randomStart && s.d) pos=Math.floor(Math.max(0,s.d*0.15+Math.random()*s.d*0.45));
-      await api('PUT','/me/player/play'+dev(),{uris:['spotify:track:'+s.id],position_ms:fromStart?0:pos});
-      playing=true; setStatus('playStatus','');
+      await spPlay({uris:['spotify:track:'+s.id],position_ms:fromStart?0:pos});
+      playing=true; setStatus('playStatus',''); verifyPlaying(s.id,'playStatus');
     }catch(e){ playing=false; setStatus('playStatus',e.message,'err'); }
     $('btnPlay').textContent=playing?'❚❚':'▶'; $('disc').classList.toggle('spin',playing);
   }
@@ -507,7 +549,7 @@ const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen vo
     if(!playing && !started){ started=true; return playCurrent(false); }
     try{
       if(playing){ await api('PUT','/me/player/pause'+dev()); playing=false; }
-      else { await api('PUT','/me/player/play'+dev()); playing=true; }
+      else { await spPlay(); playing=true; }
       setStatus('playStatus','');
     }catch(e){ setStatus('playStatus',e.message,'err'); }
     $('btnPlay').textContent=playing?'❚❚':'▶'; $('disc').classList.toggle('spin',playing);
@@ -778,13 +820,13 @@ const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen vo
     scanned=id; show('vScanPlay'); $('sAnswer').classList.add('hidden');
     $('sReveal').classList.toggle('hidden',!findKnown(id));
     setStatus('sStatus','Starten…');
-    try{ await api('PUT','/me/player/play'+dev(),{uris:['spotify:track:'+id],position_ms:0}); setSPlaying(true); setStatus('sStatus',''); }
+    try{ await spPlay({uris:['spotify:track:'+id],position_ms:0}); setSPlaying(true); setStatus('sStatus',''); verifyPlaying(id,'sStatus'); }
     catch(e){ setSPlaying(false); setStatus('sStatus',e.message,'err'); }
   }
   async function sToggle(){
     try{
       if(sPlaying){ await api('PUT','/me/player/pause'+dev()); setSPlaying(false); }
-      else { await api('PUT','/me/player/play'+dev()); setSPlaying(true); }
+      else { await spPlay(); setSPlaying(true); }
       setStatus('sStatus','');
     }catch(e){ setStatus('sStatus',e.message,'err'); }
   }
@@ -809,7 +851,11 @@ const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen vo
   $('btnLibBack').onclick=()=>{ if(libFrom==='vHome') return goHome(); renderPlayerForm(); show('vPlayers'); };
   $('btnEdDone').onclick=()=>{ renderLib(); show('vLibrary'); };
   $('edOnlyDoubt').onchange=renderEditor;
-  $('redirectUri').textContent=REDIRECT;
+  $('redirectUri').textContent=REDIRECT; $('redirectUri2').textContent=REDIRECT;
+  async function copyUri(btn){ try{ await navigator.clipboard.writeText(REDIRECT); btn.textContent='Gekopieerd ✓'; }
+    catch(e){ btn.textContent='Kopiëren lukt niet, selecteer het adres'; } setTimeout(()=>btn.textContent='Adres kopiëren',2500); }
+  $('btnCopyUri').onclick=()=>copyUri($('btnCopyUri')); $('btnCopyUri2').onclick=()=>copyUri($('btnCopyUri2'));
+  $('btnChangeId').onclick=()=>{ $('clientId').value=store.get('client_id')||''; show('vSetup'); };
   $('clientId').value=store.get('client_id')||'';
   $('btnSaveId').onclick=()=>{ const v=$('clientId').value.trim(); if(!v) return;
     store.set('client_id',v); ['access','refresh','expires'].forEach(store.del); login(); };
