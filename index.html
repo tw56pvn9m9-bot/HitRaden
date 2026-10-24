@@ -429,7 +429,22 @@ const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen vo
     await sleep(700);
     return d;
   }
+  let lastTrackId=null;
+  // Volg het apparaat waar Spotify nu actief is (bijv. de tv die je in Spotify hebt gekozen)
+  async function followActiveDevice(){
+    try{
+      const st=await api('GET','/me/player');
+      const d=st?.device;
+      if(d && d.id && d.is_active && !d.is_restricted && d.id!==store.get('device')){ store.set('device',d.id); store.set('devtype',d.type); }
+    }catch(e){}
+  }
   async function spPlay(body){
+    if(body?.uris){ lastTrackId=body.uris[0].split(':').pop(); await followActiveDevice(); }
+    await spPlayRaw(body);
+    // Nummer herhalen i.p.v. doorspelen naar andere muziek
+    if(body?.uris){ try{ await api('PUT','/me/player/repeat?state=track'+dev().replace('?','&')); }catch(e){} }
+  }
+  async function spPlayRaw(body){
     try{ await api('PUT','/me/player/play'+dev(),body); }
     catch(e){
       if(e.status===404||e.reason==='NO_ACTIVE_DEVICE'||e.status===502||e.status===503){
@@ -443,7 +458,7 @@ const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen vo
   // iPhones zetten de Spotify-app op de achtergrond stil; dan accepteert Spotify het commando wel, maar start niets.
   let pendingRetry=null;
   async function playerState(){ try{ return await api('GET','/me/player'); }catch(e){ return null; } }
-  function isPlayingNow(st){ return !!(st && st.is_playing && st.item); }
+  function isPlayingNow(st){ return !!(st && st.is_playing && st.item && (!lastTrackId || st.item.id===lastTrackId || st.item.linked_from?.id===lastTrackId)); }
   async function verifyPlaying(statusEl, retryFn, isRetry){
     await sleep(1800);
     let st=await playerState();
@@ -457,6 +472,7 @@ const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen vo
     if(!isPlayingNow(st)){
       pendingRetry={statusEl,retryFn};
       const el=$(statusEl); el.className='status err';
+      if(st?.is_playing && st?.device?.type!=='Smartphone'){ setStatus(statusEl,'Op '+dn+' speelt nog iets anders. Tik op ↺ om het nummer opnieuw te sturen. Helpt dat niet: open Spotify op '+dn+' en sluit het af, of kies het apparaat opnieuw via ⚙︎.','err'); return false; }
       el.innerHTML='Spotify op '+esc(dn)+' slaapt en start niet vanzelf. Tik hieronder om Spotify even te openen en kom dan meteen terug naar HitRaden: het nummer start dan automatisch.'+
         '<br><a class="btn secondary" style="display:inline-block;width:auto;padding:10px 16px;margin-top:10px;text-decoration:none" href="spotify:">Spotify openen</a>';
       return false;
