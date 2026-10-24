@@ -447,12 +447,31 @@ const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen vo
   async function spPlayRaw(body){
     try{ await api('PUT','/me/player/play'+dev(),body); }
     catch(e){
+      if(e.status===403){ return await playFallback(body, e); }
       if(e.status===404||e.reason==='NO_ACTIVE_DEVICE'||e.status===502||e.status===503){
         await wakeDevice();
         try{ await api('PUT','/me/player/play'+dev(),body); }
         catch(e2){ if(e2.status===404||e2.reason==='NO_ACTIVE_DEVICE') throw new Error(NO_DEVICE_HELP); throw e2; }
       } else throw e;
     }
+  }
+  // 'Restriction violated' (403): sommige apparaten/situaties weigeren een directe afspeelopdracht.
+  // Probeer achtereenvolgens: zonder apparaat-ID, na overzetten, en via de wachtrij.
+  async function playFallback(body, firstErr){
+    const tries=[
+      ()=>api('PUT','/me/player/play',body),
+      async()=>{ const d=await wakeDevice(); return api('PUT','/me/player/play'+dev(),body); },
+    ];
+    if(body?.uris) tries.push(async()=>{
+      await api('POST','/me/player/queue?uri='+encodeURIComponent(body.uris[0])+'&'+dev().slice(1));
+      await sleep(300); await api('POST','/me/player/next'+dev());
+      if(body.position_ms){ await sleep(400); try{ await api('PUT','/me/player/seek?position_ms='+body.position_ms+'&'+dev().slice(1)); }catch(e){} }
+    });
+    else tries.push(()=>api('PUT','/me/player/play'));
+    let last=firstErr;
+    for(const t of tries){ try{ await t(); return; }catch(e){ last=e; } }
+    let name=''; try{ const st=await api('GET','/me/player'); name=st?.device?.name||''; }catch(e){}
+    throw new Error('Spotify weigert het afspelen'+(name?' op '+name:'')+'. Staat er een Jam of privésessie aan in Spotify, of is het een Chromecast/tv die geen afstandsbediening toestaat? Kies dan via ⚙︎ een ander apparaat. ('+last.message+')');
   }
   // Controle: speelt het nummer echt? (titel wordt niet getoond)
   // iPhones zetten de Spotify-app op de achtergrond stil; dan accepteert Spotify het commando wel, maar start niets.
