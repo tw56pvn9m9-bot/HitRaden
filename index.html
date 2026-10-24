@@ -424,7 +424,7 @@ const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen vo
     if(!list.length) throw new Error(NO_DEVICE_HELP);
     const saved=store.get('device');
     const d=list.find(x=>x.id===saved)||list.find(x=>x.is_active)||list.find(x=>x.type==='Smartphone')||list[0];
-    store.set('device',d.id);
+    store.set('device',d.id); store.set('devtype',d.type);
     try{ await api('PUT','/me/player',{device_ids:[d.id],play:false}); }catch(e){}
     await sleep(700);
     return d;
@@ -439,20 +439,41 @@ const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen vo
       } else throw e;
     }
   }
-  // Controle: speelt het gekozen nummer echt? (titel wordt niet getoond)
-  async function verifyPlaying(trackId, statusEl){
+  // Controle: speelt het nummer echt? (titel wordt niet getoond)
+  // iPhones zetten de Spotify-app op de achtergrond stil; dan accepteert Spotify het commando wel, maar start niets.
+  let pendingRetry=null;
+  async function playerState(){ try{ return await api('GET','/me/player'); }catch(e){ return null; } }
+  function isPlayingNow(st){ return !!(st && st.is_playing && st.item); }
+  async function verifyPlaying(statusEl, retryFn, isRetry){
     await sleep(1800);
-    try{
-      const st=await api('GET','/me/player');
-      if(!st) return setStatus(statusEl,NO_DEVICE_HELP,'err');
-      const dn=st.device?.name||'onbekend apparaat';
-      if(st.item?.id!==trackId || !st.is_playing)
-        setStatus(statusEl,'Spotify reageert wel, maar het nummer speelt niet op '+dn+'. Tik nog eens op ↺, of kies een ander apparaat via ⚙︎.','err');
-      else if(st.device?.volume_percent===0)
-        setStatus(statusEl,'Speelt af op '+dn+', maar het volume staat daar op 0. Zet het volume hoger in de Spotify-app.','err');
-      else setStatus(statusEl,'🔊 Speelt af op '+dn+(st.device?.volume_percent!=null?' (volume '+st.device.volume_percent+'%)':''));
-    }catch(e){}
+    let st=await playerState();
+    if(st?.device?.type) store.set('devtype',st.device.type);
+    if(!isPlayingNow(st) && !isRetry){
+      setStatus(statusEl,'Spotify wakker maken…');
+      try{ await wakeDevice(); await retryFn(); }catch(e){}
+      await sleep(2000); st=await playerState();
+    }
+    const dn=st?.device?.name||'het apparaat';
+    if(!isPlayingNow(st)){
+      pendingRetry={statusEl,retryFn};
+      const el=$(statusEl); el.className='status err';
+      el.innerHTML='Spotify op '+esc(dn)+' slaapt en start niet vanzelf. Tik hieronder om Spotify even te openen en kom dan meteen terug naar HitRaden: het nummer start dan automatisch.'+
+        '<br><a class="btn secondary" style="display:inline-block;width:auto;padding:10px 16px;margin-top:10px;text-decoration:none" href="spotify:">Spotify openen</a>';
+      return false;
+    }
+    pendingRetry=null;
+    if(st.device?.volume_percent===0) setStatus(statusEl,'Speelt af op '+dn+', maar het volume staat daar op 0. Zet het volume hoger in de Spotify-app.','err');
+    else setStatus(statusEl,'🔊 Speelt af op '+dn);
+    return true;
   }
+  document.addEventListener('visibilitychange',async()=>{
+    if(document.visibilityState!=='visible' || !pendingRetry) return;
+    const {statusEl,retryFn}=pendingRetry; pendingRetry=null;
+    setStatus(statusEl,'Opnieuw starten…');
+    try{ await retryFn(); verifyPlaying(statusEl,retryFn,true); }catch(e){ setStatus(statusEl,e.message,'err'); }
+  });
+  // Op een telefoon niet automatisch pauzeren: een gepauzeerde Spotify-app op de achtergrond valt in slaap.
+  const autoPauseOk = () => store.get('devtype')!=='Smartphone';
 
   async function loadDevices(){
     setStatus('devStatus','Zoeken…');
@@ -461,7 +482,7 @@ const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen vo
       const list=j?.devices||[];
       if(!list.length){ sel.innerHTML='<option value="">Geen apparaat gevonden</option>';
         return setStatus('devStatus','Open Spotify op het afspeelapparaat en tik op Vernieuwen.','err'); }
-      const saved=store.get('device');
+      const saved=store.get('device'); window.__devTypes={}; list.forEach(d=>window.__devTypes[d.id]=d.type);
       list.forEach(d=>{ const o=document.createElement('option'); o.value=d.id;
         o.textContent=d.name+' ('+d.type.toLowerCase()+')'+(d.is_active?' ✓':'');
         if(d.id===saved||(!saved&&d.is_active)) o.selected=true; sel.appendChild(o); });
@@ -544,7 +565,9 @@ const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen vo
       let pos=0;
       if(G.randomStart && s.d) pos=Math.floor(Math.max(0,s.d*0.15+Math.random()*s.d*0.45));
       await spPlay({uris:['spotify:track:'+s.id],position_ms:fromStart?0:pos});
-      playing=true; setStatus('playStatus',''); verifyPlaying(s.id,'playStatus');
+      playing=true; setStatus('playStatus','');
+      const body={uris:['spotify:track:'+s.id],position_ms:fromStart?0:pos};
+      verifyPlaying('playStatus',()=>spPlay(body)).then(ok=>{ if(ok===false){} });
     }catch(e){ playing=false; setStatus('playStatus',e.message,'err'); }
     $('btnPlay').textContent=playing?'❚❚':'▶'; $('disc').classList.toggle('spin',playing);
   }
@@ -558,7 +581,7 @@ const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen vo
     }catch(e){ setStatus('playStatus',e.message,'err'); }
     $('btnPlay').textContent=playing?'❚❚':'▶'; $('disc').classList.toggle('spin',playing);
   }
-  async function pause(){ if(playing){ try{ await api('PUT','/me/player/pause'+dev()); }catch(e){} playing=false; } }
+  async function pause(force){ if(!force && !autoPauseOk()){ playing=false; return; } if(playing){ try{ await api('PUT','/me/player/pause'+dev()); }catch(e){} playing=false; } }
 
   function reveal(){
     const p=G.players[G.turn], s=G.songs[G.current], cards=sortedCards(p);
@@ -824,7 +847,7 @@ const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen vo
     scanned=id; show('vScanPlay'); $('sAnswer').classList.add('hidden');
     $('sReveal').classList.toggle('hidden',!findKnown(id));
     setStatus('sStatus','Starten…');
-    try{ await spPlay({uris:['spotify:track:'+id],position_ms:0}); setSPlaying(true); setStatus('sStatus',''); verifyPlaying(id,'sStatus'); }
+    try{ const body={uris:['spotify:track:'+id],position_ms:0}; await spPlay(body); setSPlaying(true); setStatus('sStatus',''); verifyPlaying('sStatus',()=>spPlay(body)); }
     catch(e){ setSPlaying(false); setStatus('sStatus',e.message,'err'); }
   }
   async function sToggle(){
@@ -834,12 +857,12 @@ const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen vo
       setStatus('sStatus','');
     }catch(e){ setStatus('sStatus',e.message,'err'); }
   }
-  async function sPause(){ if(sPlaying){ try{ await api('PUT','/me/player/pause'+dev()); }catch(e){} setSPlaying(false); } }
+  async function sPause(force){ if(!force && !autoPauseOk()){ setSPlaying(false); return; } if(sPlaying){ try{ await api('PUT','/me/player/pause'+dev()); }catch(e){} setSPlaying(false); } }
   $('hScan').onclick=startScan;
   $('hDigital').onclick=()=>{ renderPlayerForm(); show('vPlayers'); };
   $('pHome').onclick=goHome;
   $('sHome').onclick=goHome;
-  $('sHome2').onclick=async()=>{ await sPause(); goHome(); };
+  $('sHome2').onclick=async()=>{ await sPause(true); goHome(); };
   $('sToggle').onclick=sToggle;
   $('sRestart').onclick=()=>scanned&&playScanned(scanned);
   $('sNext').onclick=async()=>{ await sPause(); startScan(); };
@@ -866,7 +889,7 @@ const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen vo
   $('btnLogin').onclick=login;
   $('btnRefreshDev').onclick=loadDevices;
   $('btnUseDev').onclick=()=>{ const v=$('deviceSel').value; if(!v) return setStatus('devStatus','Kies eerst een apparaat.','err');
-    store.set('device',v); if(menuFrom==='vScan'||menuFrom==='vScanPlay'){ menuFrom=null; return startScan(); } if(G&&G.winner==null&&menuFrom&&['vTurn','vReveal','vOverview'].includes(menuFrom)){ menuFrom=null; return show(lastGameView); } menuFrom=null; goHome(); };
+    store.set('device',v); if(window.__devTypes?.[v]) store.set('devtype',window.__devTypes[v]); if(menuFrom==='vScan'||menuFrom==='vScanPlay'){ menuFrom=null; return startScan(); } if(G&&G.winner==null&&menuFrom&&['vTurn','vReveal','vOverview'].includes(menuFrom)){ menuFrom=null; return show(lastGameView); } menuFrom=null; goHome(); };
   $('btnAddPlayer').onclick=()=>{ if(draftPlayers.length<6){ draftPlayers.push(''); renderPlayerForm(); } };
   $('tMinus').onclick=()=>{ target=Math.max(3,target-1); $('tVal').textContent=target; };
   $('tPlus').onclick=()=>{ target=Math.min(20,target+1); $('tVal').textContent=target; };
@@ -882,9 +905,9 @@ const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen vo
   $('btnAgain').onclick=()=>{ store.del('game'); G=null; renderPlayerForm(); show('vPlayers'); };
   $('btnMenu').onclick=()=>{ menuFrom=curView; $('mNewGame').classList.toggle('hidden',!(G&&G.winner==null)); show('vMenu'); };
   $('mClose').onclick=()=>{ const f=menuFrom; menuFrom=null; if(f==='vScan') return startScan(); if(f==='vPlayers'){ renderPlayerForm(); return show('vPlayers'); } if(f) return show(f); goHome(); };
-  $('mHome').onclick=async()=>{ menuFrom=null; await pause(); await sPause(); goHome(); };
+  $('mHome').onclick=async()=>{ menuFrom=null; await pause(true); await sPause(true); goHome(); };
   $('mDevice').onclick=()=>{ show('vDevice'); loadDevices(); };
-  $('mNewGame').onclick=()=>{ if(!G||confirm('Huidig spel stoppen?')){ pause(); store.del('game'); G=null; renderPlayerForm(); show('vPlayers'); } };
+  $('mNewGame').onclick=()=>{ if(!G||confirm('Huidig spel stoppen?')){ pause(true); store.del('game'); G=null; renderPlayerForm(); show('vPlayers'); } };
 
   // Logo 1,5 s ingedrukt houden = alles wissen
   let pressT; const logo=$('logo');
