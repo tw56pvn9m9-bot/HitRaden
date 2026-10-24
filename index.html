@@ -152,6 +152,8 @@
         <button class="btn ghost" id="addPlayer">+ Speler toevoegen</button>
         <div class="eyebrow" style="margin-top:6px">Kaarten nodig om te winnen</div>
         <div class="stepper"><button id="tMinus" aria-label="Minder">−</button><b id="tVal">10</b><button id="tPlus" aria-label="Meer">+</button></div>
+        <div class="eyebrow" style="margin-top:6px">Met welke nummers?</div>
+        <div class="lists" id="gLists"></div>
         <p class="small" id="deckInfo"></p>
         <button class="btn" id="startGame">Start het spel</button>
         <button class="btn ghost" id="resumeGame" hidden>Verder met vorig spel</button>
@@ -234,15 +236,44 @@
     <div class="wrap">
       <div class="panel">
         <h2>Kaartjes maken</h2>
-        <p id="cInfo"></p>
-        <button class="btn sec" id="cCheck" hidden>Eerst jaartallen controleren</button>
+        <p class="small">Maak een PDF per afspeellijst, of kies per lijst welke nummers erin komen. Voor: QR-code. Achter: artiest, jaartal en titel.</p>
         <label class="check"><input type="checkbox" id="cShuffle" checked> Willekeurige volgorde</label>
-        <button class="btn" id="makePdf">PDF maken</button>
+      </div>
+      <div class="panel">
+        <div class="eyebrow">Per afspeellijst</div>
+        <div class="lists" id="cLists"></div>
+      </div>
+      <div class="panel">
+        <div class="eyebrow">Alle aangevinkte lijsten samen</div>
+        <p id="cInfo"></p>
+        <button class="btn sec" id="makePdf">Eén PDF van alles</button>
+      </div>
+      <div class="panel" id="cOut" hidden>
         <div class="status" id="cStatus"></div>
         <div id="cResult" hidden>
           <a class="btn" id="cDownload" target="_blank" rel="noopener">📄 PDF openen of bewaren</a>
-          <p class="small" style="margin-top:10px">Printen: dubbelzijdig, omslaan langs de lange zijde, op ware grootte (100%). Gebruik dik papier (200 g of meer) en knip langs de streepjes in de marge. Voor: QR-code. Achter: artiest, jaartal en titel.</p>
+          <p class="small" style="margin-top:10px">Printen: dubbelzijdig, omslaan langs de lange zijde, op ware grootte (100%). Gebruik dik papier (200 g of meer) en knip langs de streepjes in de marge.</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- NUMMERS KIEZEN -->
+  <section id="vPick" hidden>
+    <div class="wrap">
+      <div class="panel">
+        <div class="eyebrow" id="pkMode"></div>
+        <h2 id="pkName"></h2>
+        <input type="text" id="pkSearch" placeholder="Zoek op titel, artiest of jaar" autocomplete="off">
+        <div class="row"><button class="btn sec" id="pkAll">Alles</button><button class="btn sec" id="pkNone">Niets</button></div>
+        <p class="small" id="pkCount"></p>
+        <div id="pkList" class="lists"></div>
+      </div>
+      <div class="panel" style="position:sticky;bottom:max(8px,env(safe-area-inset-bottom,0px))">
+        <button class="btn" id="pkPdf">PDF maken</button>
+        <div class="status" id="pkStatus"></div>
+        <a class="btn" id="pkDownload" target="_blank" rel="noopener" hidden>📄 PDF openen of bewaren</a>
+        <button class="btn ghost" id="pkBack">Terug</button>
       </div>
     </div>
   </section>
@@ -263,7 +294,7 @@ const START_LIST = {"id":"l_elin-sepp-nore","name":"Elin, Sepp & Nore","songs":[
   const shuffle = a => { for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
   function setStatus(id,msg,kind){ const e=$(id); e.textContent=msg||''; e.className='status'+(kind?' '+kind:''); }
 
-  const VIEWS=['vHome','vEdit','vSetup','vTurn','vReveal','vOverview','vWin','vCards'];
+  const VIEWS=['vHome','vEdit','vSetup','vTurn','vReveal','vOverview','vWin','vCards','vPick'];
   function show(v){ VIEWS.forEach(x=>$(x).hidden=(x!==v)); $('hdrHome').hidden=(v==='vHome'); window.scrollTo(0,0); }
 
   /* ---------- Afspeellijsten ---------- */
@@ -273,8 +304,14 @@ const START_LIST = {"id":"l_elin-sepp-nore","name":"Elin, Sepp & Nore","songs":[
   let LIB=loadLib(); if(!store.get('lib')) saveLib(LIB);
   function getSel(){ try{ const v=JSON.parse(store.get('sel')||'null'); if(Array.isArray(v)) return v.filter(id=>LIB.some(l=>l.id===id)); }catch(e){} return LIB.map(l=>l.id); }
   function setSel(v){ store.set('sel',JSON.stringify(v)); }
-  function selectedSongs(){ const sel=getSel(), seen=new Set(), out=[];
-    LIB.filter(l=>sel.includes(l.id)).forEach(l=>l.songs.forEach(s=>{ if(!seen.has(s.id)){ seen.add(s.id); out.push({...s}); } })); return out; }
+  // Keuze per lijst: aparte keuze voor kaartjes ('cards') en voor het spel ('game')
+  const exKey=(id,mode)=>(mode==='game'?'gexcl_':'excl_')+id;
+  function getExcl(id,mode='cards'){ try{ const v=JSON.parse(store.get(exKey(id,mode))||'[]'); return new Set(Array.isArray(v)?v:[]); }catch(e){ return new Set(); } }
+  function setExcl(id,set,mode='cards'){ store.set(exKey(id,mode),JSON.stringify([...set])); }
+  const listSongs = (l,mode='cards') => { const ex=getExcl(l.id,mode); return l.songs.filter(s=>!ex.has(s.id)); };
+  // forCards=true: alleen de nummers die bij 'Kiezen' aangevinkt zijn; het spel gebruikt altijd de hele lijst
+  function selectedSongs(forCards){ const sel=getSel(), seen=new Set(), out=[];
+    LIB.filter(l=>sel.includes(l.id)).forEach(l=>listSongs(l,forCards?'cards':'game').forEach(s=>{ if(!seen.has(s.id)){ seen.add(s.id); out.push({...s}); } })); return out; }
 
   let pendingDelete=null;
   function renderHome(){
@@ -447,8 +484,20 @@ const START_LIST = {"id":"l_elin-sepp-nore","name":"Elin, Sepp & Nore","songs":[
       const d=r.querySelector('.del'); if(d) d.onclick=()=>{ draft.splice(i,1); renderSetup(); };
       pl.appendChild(r); });
     $('addPlayer').hidden=draft.length>=6; $('tVal').textContent=target;
-    $('deckInfo').textContent=selectedSongs().length+' nummers in de stapel.';
+    renderGameLists();
     $('resumeGame').hidden=!loadGame();
+  }
+  function renderGameLists(){
+    const sel=getSel(), box=$('gLists');
+    box.innerHTML=LIB.map(l=>{ const n=listSongs(l,'game').length;
+      return '<div class="li"><input type="checkbox" aria-label="Meespelen" data-gsel="'+esc(l.id)+'"'+(sel.includes(l.id)?' checked':'')+'>'+
+        '<div class="nm"><b>'+esc(l.name)+'</b><span>'+(n===l.songs.length?n+' nummers':n+' van '+l.songs.length+' nummers gekozen')+'</span></div>'+
+        '<button class="sbtn" data-gpick="'+esc(l.id)+'">Kiezen</button></div>'; }).join('')||'<p class="small">Importeer eerst een afspeellijst op het startscherm.</p>';
+    box.querySelectorAll('[data-gsel]').forEach(i=>i.onchange=()=>{ setSel([...box.querySelectorAll('[data-gsel]:checked')].map(x=>x.dataset.gsel)); renderGameLists(); });
+    box.querySelectorAll('[data-gpick]').forEach(b=>b.onclick=()=>openPicker(b.dataset.gpick,'game'));
+    const n=selectedSongs().length, need=draft.length+5;
+    $('deckInfo').textContent=n+' nummers in de stapel.'+(n<need?' Kies er minstens '+need+'.':'');
+    $('startGame').disabled=n<need;
   }
   const sorted=p=>p.cards.slice().sort((a,b)=>G.songs[a].y-G.songs[b].y);
   function startGame(){
@@ -574,21 +623,59 @@ const START_LIST = {"id":"l_elin-sepp-nore","name":"Elin, Sepp & Nore","songs":[
     return buildPdf(pages);
   }
   let pdfUrl=null;
-  function renderCards(){ const s=selectedSongs(), d=s.filter(x=>x.u).length, pg=Math.ceil(s.length/12);
-    $('cInfo').textContent=s.length+' kaartjes op '+pg+' vel'+(pg===1?'':'len')+' A4 (voor en achter).'+(d?' '+d+' jaartallen zijn nog niet gecontroleerd.':'');
-    $('cCheck').hidden=!d; $('cResult').hidden=true; setStatus('cStatus',''); $('makePdf').disabled=!s.length; }
-  $('goCards').onclick=()=>{ renderCards(); show('vCards'); };
-  $('cCheck').onclick=()=>{ const sel=getSel(); const l=LIB.find(x=>sel.includes(x.id)&&x.songs.some(s=>s.u)); if(l) openEditor(l.id,'vCards'); };
-  $('makePdf').onclick=async()=>{
-    let s=selectedSongs(); if(!s.length) return; if($('cShuffle').checked) s=shuffle(s);
-    $('makePdf').disabled=true; $('cResult').hidden=true;
-    try{ const blob=await makePdf(s,(a,b)=>setStatus('cStatus','Pagina '+a+' van '+b+' maken…'));
+  const fileName = name => 'kaartjes-'+(String(name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'hitlijn')+'.pdf';
+  async function generate(songs,name,statusId,linkEl,btns,onDone){
+    if(!songs.length) return;
+    if($('cShuffle').checked) songs=shuffle(songs.slice());
+    btns.forEach(b=>b.disabled=true); linkEl.hidden=true;
+    try{
+      const blob=await makePdf(songs,(a,b)=>setStatus(statusId,'"'+name+'": pagina '+a+' van '+b+' maken…'));
       if(pdfUrl) URL.revokeObjectURL(pdfUrl); pdfUrl=URL.createObjectURL(blob);
-      $('cDownload').href=pdfUrl; $('cDownload').download='hitlijn-kaartjes.pdf'; $('cResult').hidden=false;
-      setStatus('cStatus','Klaar: '+s.length+' kaartjes ('+(blob.size/1048576).toFixed(1)+' MB).','ok');
-    }catch(e){ setStatus('cStatus','Er ging iets mis: '+e.message,'err'); }
-    $('makePdf').disabled=false;
-  };
+      linkEl.href=pdfUrl; linkEl.download=fileName(name); linkEl.hidden=false;
+      const d=songs.filter(x=>x.u).length;
+      setStatus(statusId,'Klaar: "'+name+'", '+songs.length+' kaartjes ('+(blob.size/1048576).toFixed(1)+' MB).'+(d?' Let op: '+d+' jaartallen zijn niet gecontroleerd.':''),'ok');
+      onDone&&onDone();
+    }catch(e){ setStatus(statusId,'Er ging iets mis: '+e.message,'err'); }
+    btns.forEach(b=>b.disabled=false);
+  }
+  function renderCards(){
+    $('cLists').innerHTML=LIB.length?LIB.map(l=>{ const n=listSongs(l).length, d=listSongs(l).filter(x=>x.u).length;
+      return '<div class="li"><div class="nm"><b>'+esc(l.name)+'</b><span>'+(n===l.songs.length?n+' nummers':n+' van '+l.songs.length+' nummers gekozen')+(d?' · '+d+' jaartallen controleren':'')+'</span></div>'+
+        '<button class="sbtn" data-pick="'+esc(l.id)+'">Kiezen</button><button class="sbtn" data-pdf="'+esc(l.id)+'"'+(n?'':' disabled')+'>PDF</button></div>'; }).join(''):'<p class="small">Importeer eerst een afspeellijst op het startscherm.</p>';
+    $('cLists').querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>openPicker(b.dataset.pick));
+    $('cLists').querySelectorAll('[data-pdf]').forEach(b=>b.onclick=()=>{ const l=LIB.find(x=>x.id===b.dataset.pdf);
+      $('cOut').hidden=false; $('cOut').scrollIntoView({behavior:'smooth',block:'nearest'});
+      generate(listSongs(l),l.name,'cStatus',$('cDownload'),[...$('cLists').querySelectorAll('button'),$('makePdf')],()=>$('cResult').hidden=false); });
+    const s=selectedSongs(true), sel=getSel(), pg=Math.ceil(s.length/12);
+    $('cInfo').textContent=sel.length?s.length+' kaartjes uit '+sel.length+' lijst'+(sel.length===1?'':'en')+', op '+pg+' vel'+(pg===1?'':'len')+' A4. Welke lijsten meedoen, vink je aan op het startscherm.':'Vink op het startscherm de lijsten aan die je wilt combineren.';
+    $('makePdf').disabled=!s.length;
+  }
+  $('goCards').onclick=()=>{ $('cOut').hidden=true; $('cResult').hidden=true; renderCards(); show('vCards'); };
+  $('makePdf').onclick=()=>{ $('cOut').hidden=false; $('cResult').hidden=true;
+    generate(selectedSongs(true),'alle lijsten','cStatus',$('cDownload'),[...$('cLists').querySelectorAll('button'),$('makePdf')],()=>$('cResult').hidden=false); };
+
+  // Nummers kiezen per lijst
+  let picking=null, pickMode='cards';
+  function openPicker(id,mode='cards'){ picking=LIB.find(x=>x.id===id); if(!picking) return; pickMode=mode;
+    $('pkPdf').hidden=mode==='game'; $('pkMode').textContent=mode==='game'?'Nummers voor het spel':'Nummers voor de kaartjes';
+    $('pkName').textContent=picking.name; $('pkSearch').value=''; $('pkDownload').hidden=true; setStatus('pkStatus',''); renderPicker(); show('vPick'); }
+  function renderPicker(){
+    const ex=getExcl(picking.id,pickMode), q=$('pkSearch').value.trim().toLowerCase();
+    const list=picking.songs.filter(s=>!q||(s.t+' '+s.a+' '+s.y).toLowerCase().includes(q));
+    $('pkList').innerHTML=list.map(s=>'<label class="li"><input type="checkbox" data-id="'+esc(s.id)+'"'+(ex.has(s.id)?'':' checked')+'>'+
+      '<div class="nm"><b>'+esc(s.t)+'</b><span>'+esc(s.a)+' · '+s.y+(s.u?' (controleren)':'')+'</span></div></label>').join('')||'<p class="small">Niets gevonden.</p>';
+    $('pkList').querySelectorAll('input').forEach(i=>i.onchange=()=>{ const e=getExcl(picking.id,pickMode); if(i.checked) e.delete(i.dataset.id); else e.add(i.dataset.id); setExcl(picking.id,e,pickMode); updPick(); });
+    updPick();
+  }
+  function updPick(){ const n=listSongs(picking,pickMode).length;
+    $('pkCount').textContent=n+' van '+picking.songs.length+' nummers gekozen.';
+    $('pkPdf').textContent=n?'PDF van '+n+' kaartje'+(n===1?'':'s'):'Kies minstens één nummer'; $('pkPdf').disabled=!n; }
+  const visibleIds = () => [...$('pkList').querySelectorAll('input')].map(i=>i.dataset.id);
+  $('pkSearch').oninput=renderPicker;
+  $('pkAll').onclick=()=>{ const e=getExcl(picking.id,pickMode); visibleIds().forEach(id=>e.delete(id)); setExcl(picking.id,e,pickMode); renderPicker(); };
+  $('pkNone').onclick=()=>{ const e=getExcl(picking.id,pickMode); visibleIds().forEach(id=>e.add(id)); setExcl(picking.id,e,pickMode); renderPicker(); };
+  $('pkPdf').onclick=()=>generate(listSongs(picking),picking.name,'pkStatus',$('pkDownload'),[$('pkPdf')]);
+  $('pkBack').onclick=()=>{ if(pickMode==='game'){ renderSetup(); show('vSetup'); } else { renderCards(); show('vCards'); } };
 
   $('hdrHome').onclick=()=>{ renderHome(); show('vHome'); };
   renderHome(); show('vHome');
