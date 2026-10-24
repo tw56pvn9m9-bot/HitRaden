@@ -445,8 +445,12 @@ const SONGS = [{"id":"5QGGDdqiTjGA8u8TS1xQRI","t":"Zij aan zij","a":"Kinderen vo
     try{
       const st=await api('GET','/me/player');
       if(!st) return setStatus(statusEl,NO_DEVICE_HELP,'err');
+      const dn=st.device?.name||'onbekend apparaat';
       if(st.item?.id!==trackId || !st.is_playing)
-        setStatus(statusEl,'Spotify reageert wel, maar het nummer speelt niet op '+(st.device?.name||'het apparaat')+'. Tik nog eens op ↺, of kies een ander apparaat via ⚙︎.','err');
+        setStatus(statusEl,'Spotify reageert wel, maar het nummer speelt niet op '+dn+'. Tik nog eens op ↺, of kies een ander apparaat via ⚙︎.','err');
+      else if(st.device?.volume_percent===0)
+        setStatus(statusEl,'Speelt af op '+dn+', maar het volume staat daar op 0. Zet het volume hoger in de Spotify-app.','err');
+      else setStatus(statusEl,'🔊 Speelt af op '+dn+(st.device?.volume_percent!=null?' (volume '+st.device.volume_percent+'%)':''));
     }catch(e){}
   }
 
