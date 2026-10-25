@@ -104,6 +104,7 @@
   .previews figcaption{font-size:12px;color:var(--muted)}
   .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:4px}
   .seg button{border:0;background:none;color:var(--muted);font:600 14px var(--body);padding:10px 4px;border-radius:9px}
+  .seg2{grid-template-columns:1fr 1fr}
   .seg button.on{background:var(--accent);color:var(--accent-ink)}
   input[type=range]{width:100%;accent-color:var(--accent)}
   .confirm{background:var(--panel2);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px}
@@ -154,11 +155,16 @@
   <section id="vSetup" hidden>
     <div class="wrap">
       <div class="panel">
-        <h2>Wie doen er mee?</h2>
-        <p class="small">2 tot 6 spelers of teams. Iedereen begint met één kaart in de tijdlijn.</p>
+        <div class="eyebrow">Spelvorm</div>
+        <div class="seg seg2" role="group" aria-label="Spelvorm">
+          <button data-mode="timeline">Jaartal &amp; tijdlijn</button><button data-mode="quiz">Titel &amp; artiest</button>
+        </div>
+        <p class="small" id="modeInfo"></p>
+        <h2 style="margin-top:6px">Wie doen er mee?</h2>
+        <p class="small">2 tot 6 spelers of teams.</p>
         <div class="lists" id="plist"></div>
         <button class="btn ghost" id="addPlayer">+ Speler toevoegen</button>
-        <div class="eyebrow" style="margin-top:6px">Kaarten nodig om te winnen</div>
+        <div class="eyebrow" style="margin-top:6px" id="targetLabel">Kaarten nodig om te winnen</div>
         <div class="stepper"><button id="tMinus" aria-label="Minder">−</button><b id="tVal">10</b><button id="tPlus" aria-label="Meer">+</button></div>
         <div class="eyebrow" style="margin-top:6px">Met welke nummers?</div>
         <div class="lists" id="gLists"></div>
@@ -184,7 +190,12 @@
         <p class="small">Scan met de muziektelefoon</p>
         <button class="btn ghost" id="skip">Ander nummer (kost 1 muntje)</button>
       </div>
-      <div class="panel">
+      <div class="panel" id="quizPanel" hidden>
+        <h2 style="font-size:17px">Welk nummer is dit?</h2>
+        <p class="small">Noem de titel en de artiest. Tik daarna op Onthul en vink aan wat goed was: 1 punt voor de titel, 1 punt voor de artiest.</p>
+        <button class="btn" id="quizReveal">Onthul!</button>
+      </div>
+      <div class="panel" id="tlPanel">
         <h2 style="font-size:17px">Waar hoort dit nummer in jouw tijdlijn?</h2>
         <div class="tl" id="tl"></div>
         <label class="check"><input type="checkbox" id="cTitle"> Titel goed geraden</label>
@@ -210,7 +221,12 @@
         <div class="verdict" id="rVerdict"></div>
         <p class="small" id="rBonus" style="color:var(--accent)"></p>
       </div>
-      <div class="panel">
+      <div class="panel" id="rJudge" hidden>
+        <h2 style="font-size:16px" id="rjHead"></h2>
+        <label class="check"><input type="checkbox" id="rjTitle"> Titel goed (+1)</label>
+        <label class="check"><input type="checkbox" id="rjArtist"> Artiest goed (+1)</label>
+      </div>
+      <div class="panel" id="rTlPanel">
         <h2 style="font-size:16px" id="rHead"></h2>
         <div class="tl" id="rTl"></div>
       </div>
@@ -502,7 +518,9 @@ const START_LIST = {"id":"l_elin-sepp-nore","name":"Elin, Sepp & Nore","songs":[
 
   /* ---------- Spel ---------- */
   const COLORS=['#ff5a7a','#ffb020','#41d39a','#4fa8ff','#a77bff','#ff8a3d'];
-  let G=null, target=+(store.get('target')||10), draft=['',''];
+  let G=null, target=+(store.get('target')||10), draft=['',''], gameMode=store.get('gmode')==='quiz'?'quiz':'timeline';
+  const isQuiz=()=>G&&G.mode==='quiz';
+  const scoreOf=p=>G.mode==='quiz'?p.pts:p.cards.length;
   const saveGame=()=>store.set('game',JSON.stringify(G));
   function loadGame(){ try{ const g=JSON.parse(store.get('game')||'null'); return g&&g.songs&&g.winner==null?g:null; }catch(e){ return null; } }
   function renderSetup(){
@@ -513,6 +531,9 @@ const START_LIST = {"id":"l_elin-sepp-nore","name":"Elin, Sepp & Nore","songs":[
       const d=r.querySelector('.del'); if(d) d.onclick=()=>{ draft.splice(i,1); renderSetup(); };
       pl.appendChild(r); });
     $('addPlayer').hidden=draft.length>=6; $('tVal').textContent=target;
+    document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===gameMode));
+    $('modeInfo').textContent=gameMode==='quiz'?'Raad bij elk nummer de titel en de artiest. Elk goed antwoord is 1 punt.':'Raad wanneer een nummer uitkwam en leg het op de goede plek in je tijdlijn. Iedereen begint met één kaart.';
+    $('targetLabel').textContent=gameMode==='quiz'?'Punten nodig om te winnen':'Kaarten nodig om te winnen';
     renderGameLists();
     $('resumeGame').hidden=!loadGame();
   }
@@ -532,17 +553,20 @@ const START_LIST = {"id":"l_elin-sepp-nore","name":"Elin, Sepp & Nore","songs":[
   function startGame(){
     const songs=selectedSongs(); const names=draft.map((n,i)=>n.trim()||'Speler '+(i+1));
     const deck=shuffle(songs.map((_,i)=>i));
-    G={songs,deck,target,turn:0,current:null,slot:null,winner:null,players:names.map((n,i)=>({name:n,color:COLORS[i],cards:[deck.pop()],tokens:0}))};
-    store.set('target',String(target)); startTurn();
+    G={mode:gameMode,songs,deck,target,turn:0,current:null,slot:null,revealed:false,winner:null,players:names.map((n,i)=>({name:n,color:COLORS[i],cards:gameMode==='quiz'?[]:[deck.pop()],tokens:0,pts:0}))};
+    store.set('target',String(target)); store.set('gmode',gameMode); startTurn();
   }
-  function startTurn(){ if(!G.deck.length) return finish(); G.current=G.deck.pop(); G.slot=null; saveGame(); renderTurn(); show('vTurn'); }
+  function startTurn(){ if(!G.deck.length) return finish(); G.current=G.deck.pop(); G.slot=null; G.revealed=false; saveGame(); renderTurn(); show('vTurn'); }
   function renderTurn(){
     const p=G.players[G.turn];
     $('scores').innerHTML=G.players.map((x,i)=>'<div class="chip'+(i===G.turn?' active':'')+'"><span class="dot" style="background:'+x.color+'"></span>'+esc(x.name)+
-      ' <span class="n">'+x.cards.length+'/'+G.target+'</span>'+(x.tokens?'<span class="tok">● '+x.tokens+'</span>':'')+'</div>').join('');
+      ' <span class="n">'+scoreOf(x)+'/'+G.target+'</span>'+(x.tokens?'<span class="tok">● '+x.tokens+'</span>':'')+'</div>').join('');
     $('who').textContent=p.name; $('who').style.color=p.color;
     $('qr').innerHTML=QR.svg(trackUrl(G.songs[G.current].id));
     $('skip').disabled=p.tokens<1; $('cTitle').checked=false; $('cArtist').checked=false; $('stopConfirm').hidden=true;
+    $('quizPanel').hidden=!isQuiz(); $('tlPanel').hidden=isQuiz(); $('skip').hidden=isQuiz();
+    $('toOverview').textContent=isQuiz()?'Alle scores':'Alle tijdlijnen';
+    if(isQuiz()) return;
     const c=sorted(p), tl=$('tl'); tl.innerHTML='';
     const slot=(i,label)=>{ const b=document.createElement('button'); b.className='slot'+(G.slot===i?' sel':''); b.textContent=G.slot===i?'✓ Hier':label;
       b.onclick=()=>{ G.slot=i; saveGame(); renderTurn(); }; tl.appendChild(b); };
@@ -551,7 +575,25 @@ const START_LIST = {"id":"l_elin-sepp-nore","name":"Elin, Sepp & Nore","songs":[
     slot(c.length,'Later dan '+G.songs[c[c.length-1]].y);
     $('revealBtn').disabled=G.slot===null; $('revealBtn').textContent=G.slot===null?'Kies eerst een plek':'Onthul!';
   }
+  function quizReveal(){
+    const p=G.players[G.turn], s=G.songs[G.current];
+    G.revealed=true; saveGame();
+    $('rYear').textContent=s.y; $('rTitle').textContent=s.t; $('rArtist').textContent=s.a;
+    $('rVerdict').textContent=''; $('rBonus').textContent='';
+    $('rJudge').hidden=false; $('rTlPanel').hidden=true;
+    $('rjHead').textContent='Wat had '+p.name+' goed?'; $('rjTitle').checked=false; $('rjArtist').checked=false;
+    $('nextBtn').textContent='Punten geven en door';
+    show('vReveal');
+  }
+  function quizNext(){
+    const p=G.players[G.turn], pts=($('rjTitle').checked?1:0)+($('rjArtist').checked?1:0);
+    p.pts+=pts; if(pts) p.cards.push(G.current);
+    G.current=null; G.revealed=false;
+    if(p.pts>=G.target){ G.winner=G.turn; saveGame(); return finish(); }
+    G.turn=(G.turn+1)%G.players.length; startTurn();
+  }
   function reveal(){
+    $('rJudge').hidden=true; $('rTlPanel').hidden=false;
     const p=G.players[G.turn], s=G.songs[G.current], c=sorted(p);
     const prev=G.slot>0?G.songs[c[G.slot-1]].y:-Infinity, next=G.slot<c.length?G.songs[c[G.slot]].y:Infinity;
     const ok=s.y>=prev&&s.y<=next, bonus=$('cTitle').checked&&$('cArtist').checked;
@@ -566,15 +608,16 @@ const START_LIST = {"id":"l_elin-sepp-nore","name":"Elin, Sepp & Nore","songs":[
     else $('nextBtn').textContent='Volgende: '+G.players[(G.turn+1)%G.players.length].name;
     G.current=null; saveGame(); show('vReveal');
   }
-  function next(){ if(G.winner!=null) return finish(); G.turn=(G.turn+1)%G.players.length; startTurn(); }
+  function next(){ if(isQuiz()) return quizNext(); if(G.winner!=null) return finish(); G.turn=(G.turn+1)%G.players.length; startTurn(); }
   function finish(){
-    const r=G.players.slice().sort((a,b)=>b.cards.length-a.cards.length||b.tokens-a.tokens), w=G.winner!=null?G.players[G.winner]:r[0];
+    const r=G.players.slice().sort((a,b)=>scoreOf(b)-scoreOf(a)||b.tokens-a.tokens), w=G.winner!=null?G.players[G.winner]:r[0];
     $('winName').textContent=w.name; $('winName').style.color=w.color;
-    $('ranking').innerHTML=r.map((p,i)=>'<div class="rank"><span>'+(i+1)+'. '+esc(p.name)+'</span><b>'+p.cards.length+' kaarten'+(p.tokens?' · '+p.tokens+' ●':'')+'</b></div>').join('');
+    $('ranking').innerHTML=r.map((p,i)=>'<div class="rank"><span>'+(i+1)+'. '+esc(p.name)+'</span><b>'+scoreOf(p)+(isQuiz()?' punten':' kaarten')+(p.tokens?' · '+p.tokens+' ●':'')+'</b></div>').join('');
     G.winner=G.players.indexOf(w); saveGame(); show('vWin');
   }
   function overview(){
-    $('ovList').innerHTML=G.players.map(p=>'<div class="panel"><h2 style="color:'+p.color+'">'+esc(p.name)+' <span class="small" style="color:var(--muted)">'+p.cards.length+'/'+G.target+'</span></h2>'+
+    $('ovList').innerHTML=G.players.map(p=>'<div class="panel"><h2 style="color:'+p.color+'">'+esc(p.name)+' <span class="small" style="color:var(--muted)">'+scoreOf(p)+'/'+G.target+(isQuiz()?' punten':'')+'</span></h2>'+
+      (isQuiz()&&!p.cards.length?'<p class="small">Nog niets goed geraden.</p>':'')+
       sorted(p).map(k=>'<div class="tcard"><div class="y">'+G.songs[k].y+'</div><div class="t">'+esc(G.songs[k].t)+' · '+esc(G.songs[k].a)+'</div></div>').join('')+'</div>').join('');
     show('vOverview');
   }
@@ -583,7 +626,9 @@ const START_LIST = {"id":"l_elin-sepp-nore","name":"Elin, Sepp & Nore","songs":[
   $('tMinus').onclick=()=>{ target=Math.max(3,target-1); $('tVal').textContent=target; };
   $('tPlus').onclick=()=>{ target=Math.min(20,target+1); $('tVal').textContent=target; };
   $('startGame').onclick=startGame;
-  $('resumeGame').onclick=()=>{ G=loadGame(); if(!G) return; if(G.current==null) startTurn(); else { renderTurn(); show('vTurn'); } };
+  document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{ gameMode=b.dataset.mode; store.set('gmode',gameMode); renderSetup(); });
+  $('quizReveal').onclick=quizReveal;
+  $('resumeGame').onclick=()=>{ G=loadGame(); if(!G) return; G.mode=G.mode||'timeline'; G.players.forEach(p=>p.pts=p.pts||0); if(G.current==null) startTurn(); else if(isQuiz()&&G.revealed) quizReveal(); else { renderTurn(); show('vTurn'); } };
   $('skip').onclick=()=>{ const p=G.players[G.turn]; if(p.tokens<1||!G.deck.length) return; p.tokens--; G.current=G.deck.pop(); G.slot=null; saveGame(); renderTurn(); };
   $('revealBtn').onclick=reveal; $('nextBtn').onclick=next;
   $('toOverview').onclick=overview; $('ovBack').onclick=()=>show('vTurn');
@@ -694,7 +739,7 @@ const START_LIST = {"id":"l_elin-sepp-nore","name":"Elin, Sepp & Nore","songs":[
   }
   function renderBg(){
     $('bgOpts').hidden=!BG; $('bgRemove').hidden=!BG;
-    document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('on',b.dataset.where===bgOpt.where));
+    document.querySelectorAll('[data-where]').forEach(b=>b.classList.toggle('on',b.dataset.where===bgOpt.where));
     $('bgStrength').value=bgOpt.strength;
     const sample=(selectedSongs(true)[0])||{id:'5QGGDdqiTjGA8u8TS1xQRI',t:'Titel van het nummer',a:'Artiest',y:1999};
     const f=$('pvFront').getContext('2d'), b=$('pvBack').getContext('2d');
@@ -716,7 +761,7 @@ const START_LIST = {"id":"l_elin-sepp-nore","name":"Elin, Sepp & Nore","songs":[
   }
   $('bgFile').onchange=e=>{ const f=e.target.files[0]; if(f) setBgFromFile(f); e.target.value=''; };
   $('bgRemove').onclick=()=>{ BG=null; store.del('bg'); setStatus('bgStatus','Achtergrond verwijderd.'); renderBg(); };
-  document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{ bgOpt.where=b.dataset.where; store.set('bgwhere',bgOpt.where); renderBg(); });
+  document.querySelectorAll('[data-where]').forEach(b=>b.onclick=()=>{ bgOpt.where=b.dataset.where; store.set('bgwhere',bgOpt.where); renderBg(); });
   $('bgStrength').oninput=()=>{ bgOpt.strength=+$('bgStrength').value; store.set('bgstrength',String(bgOpt.strength)); renderBg(); };
   $('goCards').onclick=async()=>{ $('cOut').hidden=true; $('cResult').hidden=true; renderCards(); show('vCards');
     if(!BG) BG=await loadBg();
